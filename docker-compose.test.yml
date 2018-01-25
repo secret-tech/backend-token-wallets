@@ -1,0 +1,78 @@
+version: '3.2'
+
+networks:
+  backendTokenWalletsTests:
+
+services:
+  api:
+    image: jincort/backend-token-wallets:test
+    networks:
+      backendTokenWalletsTests:
+        aliases:
+          - api
+    build:
+      context: ./
+      dockerfile: Dockerfile.test
+    env_file:
+      - .env.test
+    command: >
+      sh -c '
+        apk add --update --no-cache curl &&
+        n=1; while [ -z "`nc -z auth 3000 && echo 1`" ] && [ "$$n" != "30" ]; do sleep 1; n=`expr $$n + 1`; echo "Wait auth $$n"; done &&
+        curl auth:3000/tenant -H "Accept: application/json" -H "Content-Type: application/json" \
+          -d "{\"email\":\"test@test.com\",\"password\":\"aA1qwerty\"}" ;
+        export AUTH_ACCESS_JWT=`curl auth:3000/tenant/login -H "Accept: application/json" -H "Content-Type: application/json" \
+          -d "{\"email\":\"test@test.com\",\"password\":\"aA1qwerty\"}" | grep -oE "accessToken\":\"[^\"]+" | cut -d\" -f3` ;
+        npm test
+      '
+    volumes:
+      - ./src/:/usr/src/app/src:ro
+      - ./test/:/usr/src/app/test:ro
+    links:
+      - mongo
+      - redis
+      - auth
+      - verify
+
+  auth:
+    image: jincort/backend-auth:production
+    networks:
+      backendTokenWalletsTests:
+        aliases:
+          - auth
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FORCE_HTTPS: disabled
+      JWT_KEY: zd003d435e74b9150aa5573cb73ddfbe1
+      THROTTLER_WHITE_LIST: "127.0.0.1"
+      TENANT_WHITE_LIST: "*"
+      THROTTLER_MAX: "10000"
+    links:
+      - redis
+
+  verify:
+    image: jincort/backend-verify:stage
+    networks:
+      backendTokenWalletsTests:
+    environment:
+      REDIS_URL: 'redis://redis:6379'
+      THROTTLER_WHITE_LIST: "127.0.0.1"
+      THROTTLER_MAX: "10000"
+    links:
+      - redis
+      - auth
+
+  redis:
+    image: jincort/backend-redis:latest
+    networks:
+      backendTokenWalletsTests:
+    tmpfs:
+      - /data
+
+  mongo:
+    image: jincort/backend-mongodb:production
+    networks:
+      backendTokenWalletsTests:
+    tmpfs:
+      - /data/db

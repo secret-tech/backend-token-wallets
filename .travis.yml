@@ -1,0 +1,9 @@
+sudo: required
+services:
+- docker
+script:
+- chmod ugo+x ./build.sh
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [
+  "$TRAVIS_BRANCH" == "dev" ]; then echo "stage"; else echo "dev-$(git rev-parse
+  --short HEAD)"; fi`
+- "./build.sh $TAG"

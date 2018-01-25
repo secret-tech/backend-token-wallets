@@ -1,0 +1,25 @@
+{
+  "compileOnSave": false,
+  "buildOnSave": false,
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "types": ["reflect-metadata"],
+    "noImplicitAny": false,
+    "sourceMap": false,
+    "lib": ["es2015"],
+    "outDir": "dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/specs/*.ts",
+    "dist",
+    "test"
+  ],
+  "types": [
+    "node"
+  ]
+}
