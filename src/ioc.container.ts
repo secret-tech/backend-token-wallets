@@ -24,7 +24,7 @@ import {
   UserRepositoryInterface,
   UserRepositoryType
 } from './services/repositories/user.repository';
-import { DummyMailService, EmailServiceInterface, EmailServiceType } from './services/external/email.service';
+import { DummyMailService, EmailServiceInterface, EmailServiceType, NsqChannelMailService } from './services/external/email.service';
 
 import { UserController } from './controllers/user.controller';
 import { DashboardController } from './controllers/dashboard.controller';
@@ -47,7 +47,11 @@ export function buildServicesContainerModule(): ContainerModule {
   ) => {
     bind<AuthClientInterface>(AuthClientType).to(AuthClient);
     bind<VerificationClientInterface>(VerificationClientType).to(VerificationClient);
-    bind<EmailServiceInterface>(EmailServiceType).to(DummyMailService).inSingletonScope();
+    if (config.app.env === 'test') {
+      bind<EmailServiceInterface>(EmailServiceType).to(DummyMailService).inSingletonScope();
+    } else {
+      bind<EmailServiceInterface>(EmailServiceType).to(NsqChannelMailService).inSingletonScope();
+    }
     bind<EmailQueueInterface>(EmailQueueType).to(EmailQueue).inSingletonScope();
     bind<Web3ClientInterface>(Web3ClientType).to(Web3Client).inSingletonScope();
     bind<Web3EventInterface>(Web3EventType).to(Web3Event).inSingletonScope();

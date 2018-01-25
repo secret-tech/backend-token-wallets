@@ -33,6 +33,7 @@ services:
       - redis
       - auth
       - verify
+      - nsqd
 
   auth:
     image: jincort/backend-auth:production
@@ -76,3 +77,18 @@ services:
       backendTokenWalletsTests:
     tmpfs:
       - /data/db
+
+  nsqlookupd:
+    image: nsqio/nsq:v1.0.0-compat
+    command: /nsqlookupd
+    networks:
+      backendTokenWalletsTests:
+
+  nsqd:
+    image: nsqio/nsq:v1.0.0-compat
+    networks:
+      backendTokenWalletsTests:
+    volumes:
+      - /data
+    command: >
+      /nsqd -max-deflate-level=6 -defalte -max-msg-size=5048576 --data-path=/data --lookupd-tcp-address=nsqlookupd:4160

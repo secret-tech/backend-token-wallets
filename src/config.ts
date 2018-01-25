@@ -10,6 +10,7 @@ const {
   HTTP_IP,
   HTTP_PORT,
 
+  ENVIRONMENT,
   APP_API_PREFIX_URL,
   APP_FRONTEND_PREFIX_URL,
 
@@ -17,6 +18,9 @@ const {
   THROTTLER_INTERVAL,
   THROTTLER_MAX,
   THROTTLER_MIN_DIFF,
+
+  NSQ_HOST,
+  NSQ_PORT,
 
   REDIS_URL,
 
@@ -56,8 +60,13 @@ export default {
     colorize: LOGGING_COLORIZE === 'true'
   },
   app: {
+    env: ENVIRONMENT || 'local',
     frontendPrefixUrl: APP_FRONTEND_PREFIX_URL || 'http://token-wallets',
     backendPrefixUrl: APP_API_PREFIX_URL || 'http://api.token-wallets'
+  },
+  nsqd: {
+    host: NSQ_HOST || 'nsqd',
+    port: parseInt(NSQ_HOST, 10) || 4150
   },
   server: {
     httpPort: parseInt(HTTP_PORT, 10) || 3000,
