@@ -1,0 +1,10 @@
+FROM mhart/alpine-node:8.6
+
+WORKDIR /usr/src/app
+ADD . /usr/src/app
+
+RUN apk add --update --no-cache git python make g++ && \
+    npm install && \
+    apk del --purge git python make g++
+
+CMD npm start
