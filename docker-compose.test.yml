@@ -91,4 +91,4 @@ services:
     volumes:
       - /data
     command: >
-      /nsqd -max-deflate-level=6 -defalte -max-msg-size=5048576 --data-path=/data --lookupd-tcp-address=nsqlookupd:4160
+      /nsqd -max-deflate-level=6 -deflate -max-msg-size=5048576 --data-path=/data --lookupd-tcp-address=nsqlookupd:4160

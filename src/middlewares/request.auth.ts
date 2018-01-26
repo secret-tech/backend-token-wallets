@@ -20,7 +20,7 @@ export class AuthMiddleware extends BaseMiddleware {
     }
     this.expressBearer(req, res, async() => {
       try {
-        if (!req.headers.authorization || !req.app.locals.token) {
+        if (!req.headers.authorization || !req['token']) {
           return this.notAuthorized(res);
         }
 
