@@ -8,6 +8,6 @@ RUN apk add --update --no-cache git python make g++ && \
     npm run build && \
     npm prune --production && \
     apk del --purge git python make g++ && \
-    rm -rf ./src ./test
+    rm -rf ./src ./test /root/.npm/_cacache
 
 CMD npm run serve
