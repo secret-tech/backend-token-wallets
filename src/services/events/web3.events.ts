@@ -12,7 +12,6 @@ import {
 } from '../../entities/transaction';
 import { getMongoRepository } from 'typeorm';
 import { TransactionRepositoryInterface, TransactionRepositoryType } from '../repositories/transaction.repository';
-import * as Bull from 'bull';
 import { chunkArray, processAsyncItemsByChunks } from '../../helpers/helpers';
 import { Logger } from '../../logger';
 
@@ -25,12 +24,12 @@ function getTxStatusByReceipt(receipt: any): string {
   }
   if (receipt.status === '0x1') {
     return TRANSACTION_STATUS_CONFIRMED;
-  } else {
-    return TRANSACTION_STATUS_FAILED;
   }
+  return TRANSACTION_STATUS_FAILED;
 }
 
 const CONCURRENT_PROCESS_PENDING_COUNT = 6;
+const TRANSACTION_CHECKING_INTERVAL_TIME: number = 15000;
 
 /* istanbul ignore next */
 @injectable()
@@ -70,11 +69,10 @@ export class Web3Event implements Web3EventInterface {
         throw Error('Unknown Web3 RPC type!');
     }
 
-    this.createContracts();
-
     if (config.rpc.type !== 'http') {
       this.attachEvents();
     }
+
     this.initDeferredTransactionsChecking();
   }
 
@@ -84,36 +82,21 @@ export class Web3Event implements Web3EventInterface {
   private initDeferredTransactionsChecking() {
     this.logger.debug('Start deferrable transaction checking');
 
-    this.queueWrapper = new Bull('check_transaction', config.redis.url);
+    const intervalExecuteMethod = () => {
+      setTimeout(() => {
+        this.checkPendingTransactions()
+          .then(() => {}, (err) => { this.logger.error('Error was occurred', err); })
+          .then(() => { intervalExecuteMethod(); });
+      }, TRANSACTION_CHECKING_INTERVAL_TIME);
+    };
 
-    this.queueWrapper.empty().then(() => {
-      this.queueWrapper.process((job) => {
-        return this.checkPendingTransactions(job);
-      });
-      this.queueWrapper.add({}, { repeat: { cron: '*/15 * * * *' } });
-      this.queueWrapper.on('error', (error) => {
-        this.logger.error(error);
-      });
-      this.queueWrapper.add({});
-    }, (err) => {
-      this.logger.error(err);
-    });
+    intervalExecuteMethod();
   }
 
   /**
    *
    */
-  createContracts() {
-    this.logger.debug('Create contracts');
-
-    this.erc20Token = new this.web3.eth.Contract(config.contracts.erc20Token.abi, config.contracts.erc20Token.address);
-  }
-
-  /**
-   *
-   * @param job
-   */
-  async checkPendingTransactions(job: any): Promise<boolean> {
+  async checkPendingTransactions(): Promise<boolean> {
     this.logger.debug('Check pending transactions in blocks');
 
     if (!this.lastCheckingBlock) {
@@ -127,33 +110,39 @@ export class Web3Event implements Web3EventInterface {
       });
 
       this.lastCheckingBlock = Math.max(
-        txWithMaxBlockHeight.length && txWithMaxBlockHeight.pop().blockNumber,
+        (txWithMaxBlockHeight.length && txWithMaxBlockHeight.pop().blockNumber || 0) - 1,
         config.web3.startBlock
       );
-      this.lastCheckingBlock--;
     }
 
     const currentBlock = await this.web3.eth.getBlockNumber();
+    if (!this.lastCheckingBlock) {
+      this.lastCheckingBlock = currentBlock;
+    }
 
-    this.logger.debug('Check blocks from', currentBlock, this.lastCheckingBlock);
+    this.logger.debug('Check blocks from', currentBlock, 'to', this.lastCheckingBlock);
     // @TODO: Also should process blocks in concurrent mode
     for (let i = this.lastCheckingBlock; i < currentBlock; i++) {
       const blockData = await this.web3.eth.getBlock(i, true);
 
       if (!(i % 10)) {
-        this.logger.debug('Blocks processed', i);
+        this.logger.debug('Blocks processed:', i);
+      }
+
+      if (!blockData) {
+        continue;
       }
 
       try {
         await processAsyncItemsByChunks(blockData.transactions || [], CONCURRENT_PROCESS_PENDING_COUNT,
-          transaction => this.processPendingTransaction(transaction));
+          transaction => this.processPendingTransaction(transaction, blockData));
       } catch (err) {
         this.logger.error(err);
       }
     }
 
-    this.logger.debug('Change lastCheckingBlock to', currentBlock);
-    this.lastCheckingBlock = currentBlock;
+    this.lastCheckingBlock = currentBlock - 1;
+    this.logger.debug('Change lastCheckingBlock to', this.lastCheckingBlock);
 
     return true;
   }
@@ -173,7 +162,7 @@ export class Web3Event implements Web3EventInterface {
     const blockData = await this.web3.eth.getBlock(data.hash, true);
     const transactions = blockData.transactions;
     for (let transaction of transactions) {
-      await this.processPendingTransaction(transaction);
+      await this.processPendingTransaction(transaction, blockData);
     }
   }
 
@@ -181,7 +170,7 @@ export class Web3Event implements Web3EventInterface {
    *
    * @param data
    */
-  async processPendingTransaction(data: any): Promise<void> {
+  async processPendingTransaction(data: any, blockData: any): Promise<void> {
     const txHash = data.transactionHash || data.hash;
     const tx = await this.txRep.getByHash(txHash);
     if (!tx || tx.status !== TRANSACTION_STATUS_PENDING) {
@@ -190,17 +179,17 @@ export class Web3Event implements Web3EventInterface {
 
     this.logger.debug('Check status of pending transaction', txHash);
 
+    // is it need?
     const transactionReceipt = await this.web3.eth.getTransactionReceipt(txHash);
     if (!transactionReceipt) {
       return;
     }
 
-    this.logger.debug('Process pending transaction', txHash);
+    blockData = blockData || await this.web3.eth.getBlock(data.blockNumber);
 
-    const blockData = await this.web3.eth.getBlock(data.blockNumber);
-    const status = getTxStatusByReceipt(transactionReceipt);
+    this.logger.info('Process pending transaction', txHash);
 
-    tx.status = status;
+    tx.status = getTxStatusByReceipt(transactionReceipt);
     tx.timestamp = blockData.timestamp;
     tx.blockNumber = blockData.number;
 
@@ -221,7 +210,6 @@ export class Web3Event implements Web3EventInterface {
     };
 
     this.web3.setProvider(webSocketProvider);
-    this.createContracts();
     this.attachEvents();
   }
 
@@ -237,11 +225,7 @@ export class Web3Event implements Web3EventInterface {
 
     // process pending transactions
     this.web3.eth.subscribe('pendingTransactions')
-      .on('data', (txHash) => this.processPendingTransaction(txHash));
-
-    // process ERC20 transfers
-    this.erc20Token.events.Transfer()
-      .on('data', (data) => this.processPendingTransaction(data));
+      .on('data', (txHash) => this.processPendingTransaction(txHash, null));
   }
 }
 

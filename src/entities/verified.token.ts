@@ -1,5 +1,5 @@
 import { Column, Entity, ObjectID, ObjectIdColumn } from 'typeorm';
-import { Verification } from './verification';
+import { User } from './user';
 
 @Entity()
 export class VerifiedToken {
@@ -7,24 +7,30 @@ export class VerifiedToken {
   id: ObjectID;
 
   @Column()
+  userId: ObjectID;
+
+  @Column()
   token: string;
 
   @Column()
   verified: boolean;
 
-  @Column(type => Verification)
-  verification: Verification;
+  @Column()
+  createdAt: number;
 
-  static createNotVerifiedToken(token: string, verification: any) {
+  static createNotVerifiedToken(user: User, token: string) {
     const verifiedToken = new VerifiedToken();
+    verifiedToken.userId = user.id;
+    verifiedToken.createdAt = ~~(+new Date() / 1000);
     verifiedToken.token = token;
     verifiedToken.verified = false;
-    verifiedToken.verification = Verification.createVerification(verification);
     return verifiedToken;
   }
 
-  static createVerifiedToken(token: string) {
+  static createVerifiedToken(user: User, token: string) {
     const verifiedToken = new VerifiedToken();
+    verifiedToken.userId = user.id;
+    verifiedToken.createdAt = ~~(+new Date() / 1000);
     verifiedToken.token = token;
     verifiedToken.verified = true;
     return verifiedToken;

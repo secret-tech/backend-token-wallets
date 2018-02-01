@@ -11,8 +11,8 @@ const options = {
 
 const ethAddress = Joi.string().regex(/^0x[\da-fA-F]{40,40}$/);
 
-function commonFlowRequestMiddleware(scheme: Joi.Schema, req: Request, res: Response, next: NextFunction) {
-  const result = Joi.validate(req.body || {}, scheme, options);
+function commonFlowRequestMiddleware(scheme: Joi.Schema, data: any, res: Response, next: NextFunction) {
+  const result = Joi.validate(data || {}, scheme, options);
 
   if (result.error) {
     return responseErrorWithObject(res, {
@@ -26,8 +26,7 @@ function commonFlowRequestMiddleware(scheme: Joi.Schema, req: Request, res: Resp
 
 const verificationSchema = Joi.object().keys({
   verificationId: Joi.string().required(),
-  code: Joi.string().required(),
-  method: Joi.string().required()
+  code: Joi.string().required()
 }).required();
 
 const passwordRegex = /^[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/;
@@ -40,7 +39,7 @@ export function createUser(req: Request, res: Response, next: NextFunction) {
     agreeTos: Joi.boolean().only(true).required()
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function activateUser(req: Request, res: Response, next: NextFunction) {
@@ -50,7 +49,7 @@ export function activateUser(req: Request, res: Response, next: NextFunction) {
     code: Joi.string().required()
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function initiateLogin(req: Request, res: Response, next: NextFunction) {
@@ -59,7 +58,7 @@ export function initiateLogin(req: Request, res: Response, next: NextFunction) {
     password: Joi.string().required()
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function verifyLogin(req: Request, res: Response, next: NextFunction) {
@@ -72,7 +71,7 @@ export function verifyLogin(req: Request, res: Response, next: NextFunction) {
     })
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function changePassword(req: Request, res: Response, next: NextFunction) {
@@ -81,7 +80,7 @@ export function changePassword(req: Request, res: Response, next: NextFunction) 
     newPassword: Joi.string().required().regex(passwordRegex)
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function resetPasswordInitiate(req: Request, res: Response, next: NextFunction) {
@@ -89,17 +88,26 @@ export function resetPasswordInitiate(req: Request, res: Response, next: NextFun
     email: Joi.string().required().email()
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function resetPasswordVerify(req: Request, res: Response, next: NextFunction) {
   const schema = Joi.object().keys({
     email: Joi.string().required().email(),
-    password: Joi.string().required().regex(passwordRegex),
     verification: verificationSchema
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
+}
+
+export function resetPasswordEnter(req: Request, res: Response, next: NextFunction) {
+  const schema = Joi.object().keys({
+    email: Joi.string().required(),
+    resetId: Joi.string().required(),
+    password: Joi.string().required().regex(passwordRegex),
+  });
+
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function verificationRequired(req: Request, res: Response, next: NextFunction) {
@@ -107,25 +115,45 @@ export function verificationRequired(req: Request, res: Response, next: NextFunc
     verification: verificationSchema
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function transactionFee(req: Request, res: Response, next: NextFunction) {
   const schema = Joi.object().keys({
-    gas: Joi.number().required().min(1)
+    gas: Joi.string().required()
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.query, res, next);
+}
+
+export function getErc20TokenInfo(req: Request, res: Response, next: NextFunction) {
+  const schema = Joi.object().keys({
+    contractAddress: ethAddress.required()
+  });
+
+  commonFlowRequestMiddleware(schema, req.query, res, next);
+}
+
+export function registerErc20Token(req: Request, res: Response, next: NextFunction) {
+  const schema = Joi.object().keys({
+    contractAddress: ethAddress.required(),
+    name: Joi.string().optional(),
+    symbol: Joi.string().required(),
+    decimals: Joi.number().required().min(0).max(28)
+  });
+
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }
 
 export function transactionSend(req: Request, res: Response, next: NextFunction) {
   const schema = Joi.object().keys({
     type: Joi.string().valid('eth_transfer', 'erc20_transfer').required(),
+    contractAddress: ethAddress.optional(),
     mnemonic: Joi.string().required(),
     to: ethAddress.required(),
-    gasPrice: Joi.number().optional().min(100),
+    gasPrice: Joi.string().optional(),
     amount: Joi.number().required().min(1e-10)
   });
 
-  commonFlowRequestMiddleware(schema, req, res, next);
+  commonFlowRequestMiddleware(schema, req.body, res, next);
 }

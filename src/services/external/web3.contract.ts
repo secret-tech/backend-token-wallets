@@ -1,4 +1,5 @@
 import { Web3Client } from './web3.client';
+import { EncodedTransaction, Account } from 'web3/types';
 
 /**
  *
@@ -20,7 +21,7 @@ export default class Contract {
    *
    * @param params
    */
-  async deploy(params: DeployContractInput): Promise<string> {
+  async deploy(params: DeployContractInput, account: Account): Promise<EncodedTransaction> {
     const contract = new this.web3.eth.Contract(this.abi);
 
     const deploy = contract.deploy({
@@ -29,35 +30,34 @@ export default class Contract {
     });
 
     const txInput = {
-      from: params.from,
+      from: account.address,
       to: null,
       amount: '0',
-      gas: (await deploy.estimateGas()) + 300000, // @TODO: Check magic const
+      gas: params.gas || (await deploy.estimateGas() + 300000),
       gasPrice: params.gasPrice,
       data: deploy.encodeABI()
     };
 
-    return this.web3client.sendTransactionByMnemonic(txInput, params.mnemonic, params.salt);
+    return this.web3client.signTransactionByAccount(txInput, account);
   }
 
   /**
    *
    * @param params
    */
-  async executeMethod(params: ExecuteContractMethodInput): Promise<string> {
+  async executeMethod(params: ExecuteContractMethodInput, account: Account): Promise<EncodedTransaction> {
     const method = this.contract.methods[params.methodName](...params.arguments);
-    const estimatedGas = await method.estimateGas({ from: params.from });
 
     const txInput = {
-      from: params.from,
+      from: account.address,
       to: this.address,
       amount: params.amount,
-      gas: estimatedGas + 200000, // @TODO: Check magic const
+      gas: params.gas || (await method.estimateGas({ from: account.address }) + 50000),
       gasPrice: params.gasPrice,
       data: method.encodeABI()
     };
 
-    return this.web3client.sendTransactionByMnemonic(txInput, params.mnemonic, params.salt);
+    return this.web3client.signTransactionByAccount(txInput, account);
   }
 
   /**
@@ -69,7 +69,7 @@ export default class Contract {
     return method.call();
   }
 
-  onEvent(eventName) {
-    return this.contract.events[eventName]();
+  onEvent(name: string) {
+    return this.contract.events[name]();
   }
 }

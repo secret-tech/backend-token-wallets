@@ -8,12 +8,16 @@ import config from '../../config';
 import { getPrivateKeyByMnemonicAndSalt } from '../crypto';
 import Contract from './web3.contract';
 import { Logger } from '../../logger';
+import { EncodedTransaction, Account } from 'web3/types';
 
 export interface Web3ClientInterface {
-  sendTransactionByMnemonic(input: TransactionInput, mnemonic: string, salt: string): Promise<string>;
+  sendTransactionByAccount(input: TransactionInput, account: Account): Promise<string>;
+  signTransactionByAccount(input: TransactionInput, account: Account): Promise<EncodedTransaction>;
+  sendSignedTransaction(rawTransaction: string): Promise<string>;
+
+  sufficientBalance(input: TransactionInput): Promise<boolean>;
   getAccountByMnemonicAndSalt(mnemonic: string, salt: string): any;
   getEthBalance(address: string): Promise<string>;
-  sufficientBalance(input: TransactionInput): Promise<boolean>;
   getCurrentGasPrice(): Promise<string>;
   getContract(abi: any[], address?: string): Contract;
   getTransactionFee(gas: string): Promise<any>;
@@ -57,10 +61,22 @@ export class Web3Client implements Web3ClientInterface {
    * @param mnemonic
    * @param salt
    */
-  sendTransactionByMnemonic(input: TransactionInput, mnemonic: string, salt: string): Promise<string> {
+  sendTransactionByAccount(input: TransactionInput, account: Account): Promise<string> {
     this.logger.debug('SendTransactionByMnemonic', input.amount, input.from, input.to, input.gas, input.gasPrice);
 
-    const privateKey = getPrivateKeyByMnemonicAndSalt(mnemonic, salt);
+    return this.signTransactionByAccount(input, account).then(tx => {
+      return this.sendSignedTransaction(tx.raw);
+    });
+  }
+
+  /**
+   *
+   * @param input
+   * @param mnemonic
+   * @param salt
+   */
+  async signTransactionByAccount(input: TransactionInput, account: Account): Promise<EncodedTransaction> {
+    this.logger.debug('signTransactionByAccount', input.amount, input.from, input.to, input.gas, input.gasPrice);
 
     const params = {
       value: this.web3.utils.toWei(input.amount.toString()),
@@ -71,27 +87,33 @@ export class Web3Client implements Web3ClientInterface {
       data: input.data
     };
 
-    return new Promise<string>((resolve, reject) => {
-      this.sufficientBalance(input).then((sufficient) => {
-        if (!sufficient) {
-          reject({
-            message: 'Insufficient funds to perform this operation and pay tx fee'
-          });
-        }
+    if (!await this.sufficientBalance(input)) {
+      throw new Error('Insufficient funds to perform this operation and pay tx fee');
+    }
 
-        this.web3.eth.accounts.signTransaction(params, privateKey).then(transaction => {
-          this.web3.eth.sendSignedTransaction(transaction.rawTransaction)
-            .on('transactionHash', transactionHash => {
-              resolve(transactionHash);
-            })
-            .on('error', (error) => {
-              reject(error);
-            })
-            .catch((error) => {
-              reject(error);
-            });
+    return this.web3.eth.accounts.signTransaction(params, account.privateKey);
+  }
+
+  /**
+   *
+   * @param input
+   * @param mnemonic
+   * @param salt
+   */
+  sendSignedTransaction(rawTransaction: string): Promise<string> {
+    this.logger.debug('sendSignedTransaction');
+
+    return new Promise<string>((resolve, reject) => {
+      this.web3.eth.sendSignedTransaction(rawTransaction)
+        .on('transactionHash', transactionHash => {
+          resolve(transactionHash);
+        })
+        .on('error', (error) => {
+          reject(error);
+        })
+        .catch((error) => {
+          reject(error);
         });
-      });
     });
   }
 

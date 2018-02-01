@@ -37,14 +37,9 @@ const {
   VERIFY_BASE_URL,
   VERIFY_TIMEOUT,
 
-  ICO_SC_ADDRESS,
-  ICO_SC_ABI_FILEPATH,
+  METRICS_AUTH_USERNAME,
+  METRICS_AUTH_PASSWORD,
 
-  WHITELIST_SC_ADDRESS,
-  WHITELIST_SC_FILEPATH,
-  WHITELIST_OWNER_PK_FILEPATH,
-
-  ERC20_TOKEN_ADDRESS,
   ERC20_TOKEN_ABI_FILEPATH,
 
   RPC_TYPE,
@@ -73,17 +68,17 @@ export default {
     httpIp: HTTP_IP || '0.0.0.0'
   },
   web3: {
-    startBlock: WEB3_RESTORE_START_BLOCK || 2518767,
+    startBlock: WEB3_RESTORE_START_BLOCK || 0,
     defaultInvestGas: '130000'
   },
   redis: {
     url: REDIS_URL || 'redis://redis:6379',
-    prefix: 'jincor_ico_dashboard_'
+    prefix: 'jcbtw_'
   },
   throttler: {
     prefix: 'request_throttler_',
     interval: THROTTLER_INTERVAL || 1000,
-    maxInInterval: THROTTLER_MAX || 5,
+    maxInInterval: THROTTLER_MAX || 2,
     minDifference: THROTTLER_MIN_DIFF || 0,
     whiteList: THROTTLER_WHITE_LIST ? THROTTLER_WHITE_LIST.split(',') : []
   },
@@ -95,6 +90,10 @@ export default {
     baseUrl: VERIFY_BASE_URL || 'http://verify:3000',
     maxAttempts: 3
   },
+  metrics: {
+    authUsername: METRICS_AUTH_USERNAME || 'metrics',
+    authPassword: METRICS_AUTH_PASSWORD || 'metrics'
+  },
   email: {
     domain: 'jincor.com',
     from: {
@@ -103,17 +102,7 @@ export default {
     }
   },
   contracts: {
-    whiteList: {
-      address: WHITELIST_SC_ADDRESS,
-      abi: WHITELIST_SC_ADDRESS && JSON.parse(fs.readFileSync(WHITELIST_SC_FILEPATH).toString()) || [],
-      ownerPk: WHITELIST_SC_ADDRESS && fs.readFileSync(WHITELIST_OWNER_PK_FILEPATH).toString()
-    },
-    ico: {
-      address: ICO_SC_ADDRESS,
-      abi: ICO_SC_ADDRESS && JSON.parse(fs.readFileSync(ICO_SC_ABI_FILEPATH).toString()) || []
-    },
     erc20Token: {
-      address: ERC20_TOKEN_ADDRESS,
       abi: JSON.parse(fs.readFileSync(ERC20_TOKEN_ABI_FILEPATH).toString())
     }
   },

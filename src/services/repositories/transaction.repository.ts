@@ -23,14 +23,13 @@ interface ExtendedTransaction extends Transaction {
  *
  */
 export interface TransactionRepositoryInterface {
-  newTransaction(): Transaction;
   save(tx: Transaction): Promise<Transaction>;
-  getAllByUserAndStatusIn(user: User, statuses: string[], types: string[]): Promise<ExtendedTransaction[]>;
+  getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[]): Promise<ExtendedTransaction[]>;
   getByHash(transactionHash: string): Promise<Transaction>;
   getByVerificationId(verificationId: string): Promise<Transaction>;
 }
 
-export function allStatusesWithoutUnconfirmed() {
+export function allStatuses() {
   return [
     TRANSACTION_STATUS_PENDING,
     TRANSACTION_STATUS_CONFIRMED,
@@ -45,13 +44,6 @@ export function allStatusesWithoutUnconfirmed() {
 export class TransactionRepository implements TransactionRepositoryInterface {
   /**
    *
-   */
-  newTransaction(): Transaction {
-    return getConnection().getMongoRepository(Transaction).create();
-  }
-
-  /**
-   *
    * @param tx
    */
   save(tx: Transaction): Promise<Transaction> {
@@ -60,20 +52,20 @@ export class TransactionRepository implements TransactionRepositoryInterface {
 
   /**
    *
-   * @param user
+   * @param wallet
    * @param statuses
    * @param types
    */
-  async getAllByUserAndStatusIn(user: User, statuses: string[], types: string[]): Promise<ExtendedTransaction[]> {
+  async getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[]): Promise<ExtendedTransaction[]> {
     const data = await getMongoManager().createEntityCursor(Transaction, {
       $and: [
         {
           $or: [
             {
-              from: user.wallet.address
+              from: wallet.address
             },
             {
-              to: user.wallet.address
+              to: wallet.address
             }
           ]
         },
@@ -87,16 +79,18 @@ export class TransactionRepository implements TransactionRepositoryInterface {
             $in: types
           }
         }
-      ]
+      ],
+    })
+    .sort({
+      timestamp: -1
     }).toArray() as ExtendedTransaction[];
 
     for (let transaction of data) {
-      if (transaction.from === user.wallet.address) {
+      if (transaction.from === wallet.address) {
         transaction.direction = DIRECTION_OUT;
       } else {
         transaction.direction = DIRECTION_IN;
       }
-      delete transaction.verification;
     }
 
     return data;
@@ -107,8 +101,7 @@ export class TransactionRepository implements TransactionRepositoryInterface {
    * @param transactionHash
    */
   getByHash(transactionHash: string): Promise<Transaction> {
-    const txRepo = getConnection().getMongoRepository(Transaction);
-    return txRepo.findOne({
+    return getConnection().getMongoRepository(Transaction).findOne({
       transactionHash
     });
   }

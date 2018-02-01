@@ -1,8 +1,10 @@
+import { injectable } from 'inversify';
 import { Response, Request, NextFunction } from 'express';
 import * as redis from 'redis';
 import RateLimiter = require('rolling-rate-limiter');
 import config from '../config';
 import { getRemoteIpFromRequest } from './request.common';
+import { BaseMiddleware } from 'inversify-express-utils';
 
 const { throttler: { prefix, interval, maxInInterval, minDifference, whiteList } } = config;
 
@@ -14,31 +16,48 @@ const defaultOptions = {
   whiteList: whiteList
 };
 
-export class RequestThrottler {
-  limiter: RateLimiter;
-  whiteList: Array<string>;
+@injectable()
+export class ThrottlerMiddleware extends BaseMiddleware {
+  private limiter: RateLimiter;
+  private whiteList: Array<string>;
 
   /**
    * constructor
-   *
-   * @param options
    */
-  constructor(options?) {
-    const { redis: { url } } = config;
-    const redisClient = redis.createClient(url);
+  constructor() {
+    super();
 
-    if (!options) {
-      options = defaultOptions;
-    }
+    const { redis: { url } } = config;
+    const redisClient = redis.createClient(url, {
+      prefix: config.redis.prefix + '_thm_',
+      retry_strategy: (options) => {
+        if (options.error && options.error.code === 'ECONNREFUSED') {
+            return new Error('The server refused the connection');
+        }
+        if (options.total_retry_time > 1000 * 60) {
+            return new Error('Retry time exhausted');
+        }
+        if (options.attempt > 10) {
+            return undefined;
+        }
+        return Math.min(options.attempt * 100, 3000);
+      }
+    });
 
     this.limiter = RateLimiter({
       redis: redisClient,
-      ...options
+      ...defaultOptions
     });
-    this.whiteList = options.whiteList;
+    this.whiteList = defaultOptions.whiteList;
   }
 
-  throttle(req: Request, res: Response, next: NextFunction) {
+  /**
+   *
+   * @param req
+   * @param res
+   * @param next
+   */
+  handler(req: Request, res: Response, next: NextFunction) {
     const ip = getRemoteIpFromRequest(req);
 
     if (this.whiteList.indexOf(ip) !== -1) {

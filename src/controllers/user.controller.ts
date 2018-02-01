@@ -1,5 +1,8 @@
 import { Response, Request } from 'express';
-import { UserApplicationType, UserApplication } from '../services/app/user.app';
+import { UserCommonApplicationType, UserCommonApplication } from '../services/app/user/user.common.app';
+import { UserAccountApplicationType, UserAccountApplication } from '../services/app/user/user.account.app';
+import { UserPasswordApplicationType, UserPasswordApplication } from '../services/app/user/user.password.app';
+import { UserSecurityApplicationType, UserSecurityApplication } from '../services/app/user/user.security.app';
 import { inject, injectable } from 'inversify';
 import { controller, httpPost, httpGet } from 'inversify-express-utils';
 
@@ -9,11 +12,15 @@ import { AuthenticatedRequest } from '../interfaces';
  * UserController
  */
 @controller(
-  '/user'
+  '/user',
+  'ThrottlerMiddleware',
 )
 export class UserController {
   constructor(
-    @inject(UserApplicationType) private userApp: UserApplication
+    @inject(UserCommonApplicationType) private userCommonApp: UserCommonApplication,
+    @inject(UserAccountApplicationType) private userAccountApp: UserAccountApplication,
+    @inject(UserPasswordApplicationType) private userPasswordApp: UserPasswordApplication,
+    @inject(UserSecurityApplicationType) private userSecurityApp: UserSecurityApplication
   ) { }
 
   /**
@@ -27,7 +34,7 @@ export class UserController {
     'CreateUserValidation'
   )
   async create(req: Request, res: Response): Promise<void> {
-    res.json(await this.userApp.create(req.body));
+    res.json(await this.userAccountApp.create(req.body));
   }
 
   /**
@@ -38,10 +45,10 @@ export class UserController {
    */
   @httpPost(
     '/activate',
-    'ActivateUserValidation'
+    'VerificationRequiredValidation'
   )
   async activate(req: Request, res: Response): Promise<void> {
-    res.json(await this.userApp.activate(req.body));
+    res.json(await this.userAccountApp.activate(req.body));
   }
 
   /**
@@ -55,7 +62,7 @@ export class UserController {
     'InitiateLoginValidation'
   )
   async initiateLogin(req: RemoteInfoRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.initiateLogin(req.body, req.app.locals.remoteIp));
+    res.json(await this.userAccountApp.initiateLogin(req.body, req.app.locals.remoteIp));
   }
 
   /**
@@ -66,10 +73,10 @@ export class UserController {
    */
   @httpPost(
     '/login/verify',
-    'VerifyLoginValidation'
+    'VerificationRequiredValidation'
   )
   async validateLogin(req: Request, res: Response): Promise<void> {
-    res.status(200).send(await this.userApp.verifyLogin(req.body));
+    res.status(200).send(await this.userAccountApp.verifyLogin(req.body));
   }
 
   /**
@@ -83,7 +90,16 @@ export class UserController {
     'AuthMiddleware'
   )
   async getMe(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.getUserInfo(req.app.locals.user));
+    res.json(await this.userCommonApp.getUserInfo(req.app.locals.user));
+  }
+
+  @httpPost(
+    '/me/erc20token/register',
+    'AuthMiddleware',
+    'RegisterErc20TokenValidation'
+  )
+  async registerErc20Token(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
+    res.json(await this.userCommonApp.registerToken(req.app.locals.user, req.body));
   }
 
   @httpPost(
@@ -92,16 +108,16 @@ export class UserController {
     'ChangePasswordValidation'
   )
   async initiateChangePassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.initiateChangePassword(req.app.locals.user, req.body));
+    res.json(await this.userPasswordApp.initiateChangePassword(req.app.locals.user, req.body));
   }
 
   @httpPost(
     '/me/changePassword/verify',
     'AuthMiddleware',
-    'ChangePasswordValidation'
+    'VerificationRequiredValidation'
   )
   async verifyChangePassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.verifyChangePassword(req.app.locals.user, req.body));
+    res.json(await this.userPasswordApp.verifyChangePassword(req.app.locals.user, req.body));
   }
 
   @httpPost(
@@ -109,7 +125,7 @@ export class UserController {
     'ResetPasswordInitiateValidation'
   )
   async initiateResetPassword(req: Request, res: Response): Promise<void> {
-    res.json(await this.userApp.initiateResetPassword(req.body));
+    res.json(await this.userPasswordApp.initiateResetPassword(req.body));
   }
 
   @httpPost(
@@ -117,7 +133,15 @@ export class UserController {
     'ResetPasswordVerifyValidation'
   )
   async verifyResetPassword(req: Request, res: Response): Promise<void> {
-    res.json(await this.userApp.verifyResetPassword(req.body));
+    res.json(await this.userPasswordApp.verifyResetPassword(req.body));
+  }
+
+  @httpPost(
+    '/resetPassword/enter',
+    'ResetPasswordEnterValidation'
+  )
+  async enterResetPassword(req: Request, res: Response): Promise<void> {
+    res.json(await this.userPasswordApp.resetPasswordEnter(req.body));
   }
 
   @httpGet(
@@ -125,7 +149,7 @@ export class UserController {
     'AuthMiddleware'
   )
   async enable2faInitiate(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.initiateEnable2fa(req.app.locals.user));
+    res.json(await this.userSecurityApp.initiateEnable2fa(req.app.locals.user));
   }
 
   @httpPost(
@@ -134,7 +158,7 @@ export class UserController {
     'VerificationRequiredValidation'
   )
   async enable2faVerify(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.verifyEnable2fa(req.app.locals.user, req.body));
+    res.json(await this.userSecurityApp.verifyEnable2fa(req.app.locals.user, req.body));
   }
 
   @httpGet(
@@ -142,7 +166,7 @@ export class UserController {
     'AuthMiddleware'
   )
   async disable2faInitiate(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.initiateDisable2fa(req.app.locals.user));
+    res.json(await this.userSecurityApp.initiateDisable2fa(req.app.locals.user));
   }
 
   @httpPost(
@@ -151,6 +175,6 @@ export class UserController {
     'VerificationRequiredValidation'
   )
   async disable2faVerify(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userApp.verifyDisable2fa(req.app.locals.user, req.body));
+    res.json(await this.userSecurityApp.verifyDisable2fa(req.app.locals.user, req.body));
   }
 }

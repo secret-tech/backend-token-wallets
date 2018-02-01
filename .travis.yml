@@ -3,7 +3,9 @@ services:
 - docker
 script:
 - chmod ugo+x ./build.sh
-- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [
-  "$TRAVIS_BRANCH" == "dev" ]; then echo "stage"; else echo "dev-$(git rev-parse
-  --short HEAD)"; fi`
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [ "$TRAVIS_BRANCH"
+  == "dev" ]; then echo "stage"; else echo "dev-$(git rev-parse --short HEAD)"; fi`
 - "./build.sh $TAG"
+notifications:
+  slack:
+    secure: GVCcLWm0I+h0XXppj7PW197wR5zcg+2jN3PBq4Pxq3XaNHLwMKClNmzfXfU0FqbXzj2VJwyny0tL5/rk8rOjaI26n2wc+ALzCr4p2nCP0f+zNezpOEvLkUbIhZFHyZNZzg4m2zIkm1b3sfEX/gPetCGhrtq09Ke8+BS749U9nc2ysHZ3Fr9coTMeogq5AiHfWQxjBuwMZoedgaSs3mK+fR9+fHGbytocLsk2NrpukDNpyq8egzD5nam7D0wGN8GRfBPtRMP4bWUhnqozNl4XRC7dAm+rFiCKP2pYbckDhdNdaYBjAXBLmnsvG5I4xVT9gRZ37PWJr3HNIzNARwQnqKr9tD4zbuvK1JmdClu0naMK/hvhQhuTM7K9A7sJ1xRCad6umenSOAaiBwSU1HkLWmQT/jrc6Vii6dhaEryi/kLsCAo3Cw3avA7QiGmkLEh7mXazCiOX8KHXb0O74K+SczS1wlncK1HdtZI9osriE2YtCk7EL1aTdnvVzdazDdAEW202fAEEDG42/5XfUy4X880Tx8Zf1zJSOYiESiv6Mv83GSCX5M5aU3AYd2nYPTTNq1scIenUtA14fRWTotun56+FOLwfWKqdJjRA3PQv7TDtF3Dkzlzc/pQtbAb0MKV1FFXK1fdekvGq2YAM5JfUEtYIJivIJWCSyLt2hGiINgs=

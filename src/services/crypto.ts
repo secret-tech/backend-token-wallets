@@ -1,5 +1,14 @@
 const bip39 = require('bip39');
 const hdkey = require('ethereumjs-wallet/hdkey');
+import * as web3utils from 'web3-utils';
+
+/**
+ *
+ * @param contractAddress
+ */
+export function toEthChecksumAddress(contractAddress: string): string {
+  return web3utils.toChecksumAddress(contractAddress)
+}
 
 /**
  *

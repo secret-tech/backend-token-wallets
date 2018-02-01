@@ -9,6 +9,16 @@ export default function defaultExceptionHandle(err: Error, req: Request, res: Re
   let status;
 
   switch (err.constructor) {
+    case Err.NotCorrectTransactionRequest:
+      // no break
+    case Err.UserExists:
+      // no break
+    case Err.NotCorrectVerificationCode:
+      // no break
+    case Err.MaxVerificationsAttemptsReached:
+      // no break
+    case Err.IncorrectMnemonic:
+      // no break
     case Err.InsufficientEthBalance:
       // no break
     case Err.AuthenticatorError:
@@ -24,14 +34,6 @@ export default function defaultExceptionHandle(err: Error, req: Request, res: Re
     case Err.UserNotFound:
       status = 404;
       break;
-    case Err.UserExists:
-      // no break
-    case Err.NotCorrectVerificationCode:
-      // no break
-    case Err.MaxVerificationsAttemptsReached:
-      // no break
-    case Err.IncorrectMnemonic:
-      // no break
     default:
       status = 500;
   }
