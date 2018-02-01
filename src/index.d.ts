@@ -101,6 +101,13 @@ declare interface ValidationResult extends Result {
   };
 }
 
+declare interface InitiatedVerification {
+  verificationId: string;
+  method: string;
+  totpUri?: string;
+  qrPngDataUri?: string;
+}
+
 declare interface ValidateVerificationInput {
   code: string;
   removeSecret?: boolean;
@@ -112,6 +119,7 @@ declare interface UserData {
   agreeTos: boolean;
   passwordHash?: string;
   source?: any;
+  wallets?: any[];
 }
 
 declare interface InputUserData extends UserData {
@@ -122,6 +130,7 @@ declare interface Wallet {
   ticker: string;
   address: string;
   balance: string;
+  tokens: any[];
   salt?: string;
 }
 
@@ -131,17 +140,13 @@ declare interface NewWallet extends Wallet {
 }
 
 declare interface CreatedUserData extends UserData {
-  id: string;
-  verification: {
-    id: string,
-    method: string
-  };
   isVerified: boolean;
   defaultVerificationMethod: string;
+  verification: InitiatedVerification;
 }
 
 declare interface BaseInitiateResult {
-  verification: InitiateResult;
+  verification: InitiatedVerification;
 }
 
 declare interface InitiateLoginResult extends BaseInitiateResult {
@@ -150,7 +155,15 @@ declare interface InitiateLoginResult extends BaseInitiateResult {
 }
 
 declare interface VerifyLoginResult extends InitiateLoginResult {
+}
 
+declare interface VerificationData {
+  verificationId: string;
+  code: string;
+}
+
+declare interface VerificationInput {
+  verification: VerificationData;
 }
 
 declare interface ActivationUserData {
@@ -169,33 +182,18 @@ declare interface InitiateLoginInput {
   password: string;
 }
 
-declare interface VerifyLoginInput {
+declare interface VerifyLoginInput extends VerificationInput {
   accessToken: string;
-  verification: {
-    id: string,
-    code: string,
-    method: string
-  };
-}
-
-declare interface InitiateChangePasswordInput {
-  oldPassword: string;
-  newPassword: string;
-}
-
-declare interface VerificationData {
-  verificationId: string;
-  code: string;
-  method: string;
-}
-
-declare interface VerificationInput {
-  verification?: VerificationData;
 }
 
 declare interface ResetPasswordInput extends VerificationInput {
   email: string;
   password: string;
+}
+
+declare interface InitiateChangePasswordInput {
+  oldPassword: string;
+  newPassword: string;
 }
 
 declare interface Enable2faResult {
@@ -204,27 +202,26 @@ declare interface Enable2faResult {
 
 declare interface UserInfo {
   ethAddress: string;
+  tokens: any;
   email: string;
   name: string;
   defaultVerificationMethod: string;
 }
 
-interface TransactionInput {
+declare interface TransactionInput {
   from: string;
   to: string;
   amount: string;
-  gas: number;
+  gas: string;
   gasPrice: string;
   data?: any;
 }
 
 declare interface DeployContractInput {
-  from: string;
-  mnemonic: string;
-  salt: string;
   constructorArguments: any;
   byteCode: string;
   gasPrice: string;
+  gas?: string;
 }
 
 declare interface ExecuteContractConstantMethodInput {
@@ -234,10 +231,8 @@ declare interface ExecuteContractConstantMethodInput {
 }
 
 declare interface ExecuteContractMethodInput extends ExecuteContractConstantMethodInput {
-  from: string;
-  mnemonic: string;
-  salt: string;
   amount: string;
+  gas?: string;
 }
 
 declare interface RemoteInfoRequest {
@@ -252,4 +247,10 @@ declare interface ReqBodyToInvestInput {
   gas: string;
   gasPrice: string;
   ethAmount: string;
+}
+
+declare interface Erc20TokenInfo {
+  name: string;
+  symbol: string;
+  decimals: number;
 }

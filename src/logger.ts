@@ -6,6 +6,10 @@ winston.configure({
   transports: [newConsoleTransport()]
 });
 
+/**
+ *
+ * @param name
+ */
 export function newConsoleTransport(name?: string) {
   return new (winston.transports.Console)({
     label: name || '',

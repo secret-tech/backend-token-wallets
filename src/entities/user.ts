@@ -1,9 +1,9 @@
 import { Column, Entity, ObjectID, ObjectIdColumn } from 'typeorm';
 import { Index } from 'typeorm/decorator/Index';
 
-import { Verification, EMAIL_VERIFICATION } from './verification';
 import { Wallet } from './wallet';
 import { base64encode } from '../helpers/helpers';
+import { VerifyMethod } from './verify.action';
 
 @Entity()
 @Index('user_email', () => ({
@@ -34,29 +34,31 @@ export class User {
   @Column()
   source: any;
 
-  @Column(type => Verification)
-  verification: Verification;
-
   @Column(type => Wallet)
-  wallet: Wallet;
+  wallets: Wallet[];
 
-  static createUser(data: UserData, verification) {
+  @Column()
+  createdAt: number;
+
+  static createUser(data: any) {
     const user = new User();
+    user.wallets = data.wallets || [];
     user.email = data.email;
     user.name = data.name;
-    user.agreeTos = data.agreeTos;
+    user.agreeTos = data.agreeTos || false;
     user.passwordHash = data.passwordHash;
     user.isVerified = false;
-    user.defaultVerificationMethod = EMAIL_VERIFICATION;
-    user.verification = Verification.createVerification({
-      verificationId: verification.verificationId,
-      method: EMAIL_VERIFICATION
-    });
-    user.source = data.source;
+    user.defaultVerificationMethod = VerifyMethod.EMAIL;
+    user.source = data.source || 'unknown';
+    user.createdAt = ~~(+new Date() / 1000);
     return user;
   }
 
-  addWallet(data: any) {
-    this.wallet = Wallet.createWallet(data);
+  addWallet(wallet: Wallet) {
+    this.wallets = this.wallets || [];
+    if (!this.wallets.filter(w => w.ticker.toLowerCase() != wallet.ticker.toLowerCase() &&
+      w.address.toLowerCase() != wallet.address.toLowerCase()).length) {
+      this.wallets.push(wallet);
+    }
   }
 }

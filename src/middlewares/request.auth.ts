@@ -14,6 +14,12 @@ export class AuthMiddleware extends BaseMiddleware {
   protected expressBearer;
   @inject(AuthClientType) protected authClient: AuthClientInterface;
 
+  /**
+   *
+   * @param req
+   * @param res
+   * @param next
+   */
   handler(req: AuthenticatedRequest & Request, res: Response, next: NextFunction) {
     if (!this.expressBearer) {
       this.expressBearer = expressBearerToken();

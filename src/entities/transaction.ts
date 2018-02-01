@@ -1,8 +1,7 @@
 import { Column, Entity, ObjectID, ObjectIdColumn } from 'typeorm';
 import { Index } from 'typeorm/decorator/Index';
-import { Verification } from './verification';
+import { toEthChecksumAddress } from '../services/crypto';
 
-export const TRANSACTION_STATUS_UNCONFIRMED = 'unconfirmed';
 export const TRANSACTION_STATUS_PENDING = 'pending';
 export const TRANSACTION_STATUS_CONFIRMED = 'confirmed';
 export const TRANSACTION_STATUS_FAILED = 'failed';
@@ -34,6 +33,9 @@ export class Transaction {
   blockNumber: number;
 
   @Column()
+  contractAddress: string;
+
+  @Column()
   type: string;
 
   @Column()
@@ -51,9 +53,18 @@ export class Transaction {
   @Column()
   details: string;
 
-  @Column()
-  data: string;
+  static createTransaction(data: any) {
+    const tx = new Transaction();
 
-  @Column(type => Verification)
-  verification: Verification;
+    tx.transactionHash = data.transactionHash;
+    tx.contractAddress = data.contractAddress ? toEthChecksumAddress(data.contractAddress) : '';
+    tx.type = data.type;
+    tx.from = data.from;
+    tx.to = data.to;
+    tx.amount = data.amount;
+    tx.status = data.status;
+    tx.details = data.details;
+
+    return tx;
+  }
 }

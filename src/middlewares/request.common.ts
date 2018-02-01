@@ -22,6 +22,10 @@ export function httpsMiddleware(req: RemoteInfoRequest & Request, res: Response,
 }
 
 export function contentMiddleware(req: RemoteInfoRequest & Request, res: Response, next: NextFunction) {
+  if (req.path.indexOf('/_metrics/') === 0) {
+    return next();
+  }
+
   if (req.method !== 'OPTIONS') {
     const acceptHeader = req.header('Accept') || '';
     if (acceptHeader !== 'application/json' && !acceptHeader.includes('application/vnd.wallets+json;')) {

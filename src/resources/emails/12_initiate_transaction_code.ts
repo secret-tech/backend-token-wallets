@@ -1,4 +1,4 @@
-export default function(name) {
+export default function(name, transactionType) {
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -11,8 +11,10 @@ export default function(name) {
 <body width="100%" bgcolor="#fbfbfb" style="margin: 0; padding: 0 0 0 0; mso-line-height-rule: exactly;">
     <p>Hello ${ name },</p>
     <p>
-        Your password was successfully changed.
+        We’ve noticed that you were trying to initiate a transaction for transfering ${ transactionType }.
+        Please use the code <b>{{{CODE}}}</b> to proceed.
     </p>
+    <p>If this was not you, please contact our support immediately.</p>
 </body>
 </html>`;
 }
