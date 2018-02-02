@@ -4,6 +4,7 @@ import { getMongoManager } from 'typeorm';
 import { User } from '../../entities/user';
 
 export interface UserRepositoryInterface {
+  getAllByWalletAddresses(walletAddresses: string[]): Promise<User[]>;
   save(u: User): Promise<User>;
 }
 
@@ -12,6 +13,18 @@ export interface UserRepositoryInterface {
  */
 @injectable()
 export class UserRepository {
+  getAllByWalletAddresses(walletAddresses: string[]): Promise<User[]> {
+    return getMongoManager().createEntityCursor(User, {
+      'wallets.address': {
+        $in: walletAddresses
+      },
+    }).project({
+      'wallets.address': 1,
+      'wallets.ticker': 1
+    })
+    .toArray();
+  }
+
   /**
    *
    * @param u

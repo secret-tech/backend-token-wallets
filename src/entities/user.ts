@@ -9,6 +9,9 @@ import { VerifyMethod } from './verify.action';
 @Index('user_email', () => ({
   email: 1
 }), { unique: true })
+@Index('user_wallets', () => ({
+  'wallets.address': 1
+}), { unique: true })
 export class User {
   @ObjectIdColumn()
   id: ObjectID;
