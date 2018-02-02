@@ -84,7 +84,7 @@ export class UserAccountApplication {
     const existingUser = await getConnection().getMongoRepository(User).findOne({ email });
 
     if (existingUser) {
-      if (!existingUser.isVerified) {
+      if (!existingUser.isVerified && bcrypt.compareSync(userData.password, existingUser.passwordHash)) {
         return this.initiateCreateAndReturnUser(existingUser, initiateVerification);
       } else {
         throw new UserExists('User already exists');
