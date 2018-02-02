@@ -1,4 +1,5 @@
 import * as LRU from 'lru-cache';
+import { number } from 'joi';
 
 function escape(str: string): string {
   return str.replace(/\+/g, '-')
@@ -30,6 +31,33 @@ export function chunkArray<T>(srcArray: T[], size: number): T[][] {
     Array(Math.ceil(srcArray.length / size)),
     (_, i) => srcArray.slice(i * size, i * size + size)
   );
+}
+
+/**
+ *
+ * @param items
+ * @param chunkSize
+ * @param mapFunc
+ */
+export async function processAsyncIntRangeByChunks<R>(
+  from: number, to: number, step: number, chunkSize: number, mapFunc: (item: number) => Promise<R>
+): Promise<R[]> {
+  if (from > to) {
+    throw new Error('Invalid range');
+  }
+  let data: R[] = [];
+  let numbers: number[];
+  let j: number;
+
+  while(from <= to) {
+    numbers = [];
+    for(j = 0; j < chunkSize && from <= to; ++j, from += step) {
+      numbers.push(from);
+    }
+    data = data.concat(await Promise.all(numbers.map(mapFunc)));
+  }
+
+  return data;
 }
 
 /**

@@ -27,14 +27,14 @@ export class Erc20TokenService {
   /**
    *
    */
-  async getBalanceOf(address: string, decimals: number = 18): Promise<string> {
+  async getBalanceOf(address: string, decimals: number = 0): Promise<string> {
     return web3utils.fromWei(
       await this.erc20Token.queryMethod({
         methodName: 'balanceOf',
         gasPrice: '0',
         arguments: [address]
       }),
-      decimalsToUnitMap(decimals)
+      decimals ? decimalsToUnitMap(decimals) : 'wei'
     ).toString();
   }
 
