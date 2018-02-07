@@ -4,7 +4,7 @@ import { container } from '../../ioc.container';
 import { AuthMiddleware } from '../request.auth';
 
 chai.use(require('chai-http'));
-const {expect, request} = chai;
+const { expect, request } = chai;
 
 describe('AuthMiddleware', () => {
   it('should create auth middleware', () => {

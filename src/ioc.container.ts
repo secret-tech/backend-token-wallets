@@ -40,7 +40,6 @@ import { DashboardController } from './controllers/dashboard.controller';
 import { UserCommonApplication, UserCommonApplicationType } from './services/app/user/user.common.app';
 import { UserAccountApplication, UserAccountApplicationType } from './services/app/user/user.account.app';
 import { UserPasswordApplication, UserPasswordApplicationType } from './services/app/user/user.password.app';
-import { UserSecurityApplication, UserSecurityApplicationType } from './services/app/user/user.security.app';
 import { TransactionApplication, TransactionApplicationType } from './services/app/transaction.app';
 import { DashboardApplication, DashboardApplicationType } from './services/app/dashboard.app';
 
@@ -53,7 +52,6 @@ export function buildApplicationsContainerModule(): ContainerModule {
     bind<UserCommonApplication>(UserCommonApplicationType).to(UserCommonApplication);
     bind<UserAccountApplication>(UserAccountApplicationType).to(UserAccountApplication);
     bind<UserPasswordApplication>(UserPasswordApplicationType).to(UserPasswordApplication);
-    bind<UserSecurityApplication>(UserSecurityApplicationType).to(UserSecurityApplication);
     bind<DashboardApplication>(DashboardApplicationType).to(DashboardApplication);
     bind<TransactionApplication>(TransactionApplicationType).to(TransactionApplication);
   });
@@ -67,7 +65,7 @@ export function buildServicesContainerModule(): ContainerModule {
   ) => {
     bind<AuthClientInterface>(AuthClientType).to(AuthClient);
     bind<VerificationClientInterface>(VerificationClientType).to(VerificationClient);
-    bind<VerifyActionService>(VerifyActionServiceType).to(VerifyActionService);
+    bind<VerifyActionService>(VerifyActionServiceType).to(VerifyActionService).inSingletonScope();
     if (config.app.env === 'test') {
       bind<EmailServiceInterface>(EmailServiceType).to(DummyMailService).inSingletonScope();
     } else {
@@ -98,19 +96,7 @@ export function buildMiddlewaresContainerModule(): ContainerModule {
         challenge: true
       })(req, res, next)
     );
-    bind<express.RequestHandler>('TransactionFeeValidation').toConstantValue(validation.transactionFee);
-
     bind<express.RequestHandler>('VerificationRequiredValidation').toConstantValue(validation.verificationRequired);
-
-    bind<express.RequestHandler>('CreateUserValidation').toConstantValue(validation.createUser);
-    bind<express.RequestHandler>('InitiateLoginValidation').toConstantValue(validation.initiateLogin);
-    bind<express.RequestHandler>('ChangePasswordValidation').toConstantValue(validation.changePassword);
-    bind<express.RequestHandler>('Erc20TokenInfoValidation').toConstantValue(validation.getErc20TokenInfo);
-    bind<express.RequestHandler>('RegisterErc20TokenValidation').toConstantValue(validation.registerErc20Token);
-    bind<express.RequestHandler>('ResetPasswordInitiateValidation').toConstantValue(validation.resetPasswordInitiate);
-    bind<express.RequestHandler>('ResetPasswordVerifyValidation').toConstantValue(validation.resetPasswordVerify);
-    bind<express.RequestHandler>('ResetPasswordEnterValidation').toConstantValue(validation.resetPasswordEnter);
-    bind<express.RequestHandler>('TransactionSendValidation').toConstantValue(validation.transactionSend);
   });
 }
 

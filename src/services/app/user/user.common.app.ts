@@ -9,6 +9,8 @@ import { Logger } from '../../../logger';
 import { UserRepositoryType, UserRepositoryInterface } from '../../repositories/user.repository';
 import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface } from '../../repositories/registered.tokens.repository';
 import { Token } from '../../../entities/token';
+import { getAllNotifications, Preferences } from '../../../entities/preferences';
+import { getAllAllowedVerifications } from '../../external/verify.action.service';
 
 /**
  * UserCommonApplication
@@ -29,7 +31,15 @@ export class UserCommonApplication {
    *
    * @param user
    */
-  async getUserInfo(user: User): Promise<UserInfo> {
+  async getUserInfo(user: User): Promise<any> {
+    const preferences = user.preferences || {};
+    if (!Object.keys(preferences['notifications'] || {}).length) {
+      preferences['notifications'] = getAllNotifications().reduce((p, c) => (p[c] = true, p), {});
+    }
+    if (!Object.keys(preferences['verifications'] || {}).length) {
+      preferences['verifications'] = getAllAllowedVerifications().reduce((p, c) => (p[c] = true, p), {});
+    }
+
     return {
       ethAddress: user.wallets[0].address,
       tokens: user.wallets[0].tokens.map(t => {
@@ -38,6 +48,7 @@ export class UserCommonApplication {
           balance: undefined
         };
       }),
+      preferences,
       email: user.email,
       name: user.name,
       defaultVerificationMethod: user.defaultVerificationMethod

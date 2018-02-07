@@ -18,17 +18,17 @@ import { Web3EventType, Web3EventInterface } from '../events/web3.events';
 import { EmailQueueType, EmailQueueInterface } from '../queues/email.queue';
 import { CacheMethodResult } from '../../helpers/helpers';
 import { VerificationInitiateContext } from '../external/verify.context.service';
-import { buildScopeEmailVerificationInitiate, VerifyScope, buildScopeGoogleAuthVerificationInitiate } from '../../verify.cases';
-import { VerifyMethod } from '../../entities/verify.action';
-import { VerifyActionServiceType, VerifyActionService } from '../external/verify.action.service';
+import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../verify.cases';
+import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../external/verify.action.service';
 import { EncodedTransaction } from 'web3/types';
-import { toEthChecksumAddress } from '../crypto';
+import { toEthChecksumAddress, MasterKeySecret, decryptTextByRecoveryMasterKey, decryptTextByUserMasterKey } from '../crypto';
 
 export interface TransactionSendData {
   to: string;
   type: string;
   amount: string;
   contractAddress?: string;
+  gas?: string;
   gasPrice?: string;
 }
 
@@ -75,7 +75,7 @@ export class TransactionApplication {
   async getTransactionFee(gas: number): Promise<any> {
     this.logger.debug('Request transaction fee for gas', gas);
 
-    return await transactionsCache.run('gasFee' + gas, () => {
+    return transactionsCache.run('gasFee' + gas, () => {
       return this.web3Client.getTransactionFee('' + gas);
     });
   }
@@ -117,8 +117,10 @@ export class TransactionApplication {
             ...tx, token: knownUserTokens[contractAddress],
             details: undefined,
             // remove contract address if token is known
-            contractAddress: !knownUserTokens[contractAddress] ? contractAddress : undefined
-          }
+            contractAddress: tx.type === ERC20_TRANSFER && !knownUserTokens[contractAddress] ?
+              contractAddress :
+              undefined
+          };
         });
       });
     });
@@ -132,20 +134,28 @@ export class TransactionApplication {
    * @param gasPrice
    * @param ethAmount
    */
-  async transactionSendInitiate(user: User, mnemonic: string, transData: TransactionSendData): Promise<any> {
+  async transactionSendInitiate(user: User, paymantPassword: string, transData: TransactionSendData): Promise<any> {
     this.logger.debug('Initiate transaction', user.email, transData.type, transData.to);
 
-    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, user.wallets[0].salt);
+    const msc = new MasterKeySecret();
+
+    const mnemonic = decryptTextByUserMasterKey(msc, user.wallets[0].mnemonic, paymantPassword, user.wallets[0].securityKey);
+    const salt = decryptTextByUserMasterKey(msc, user.wallets[0].salt, paymantPassword, user.wallets[0].securityKey);
+
+    if (!mnemonic.match(/^[\w ]+$/)) {
+      throw new IncorrectMnemonic('Incorrect payment password');
+    }
+
+    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
     if (account.address !== user.wallets[0].address) {
-      throw new IncorrectMnemonic('Not correct mnemonic phrase');
+      throw new IncorrectMnemonic('Incorrect payment password');
     }
 
     if (transData.type === ERC20_TRANSFER && !transData.contractAddress) {
       throw new NotCorrectTransactionRequest('Empty token address');
     }
 
-    // @TODO: Customize it
-    const gas = '56000';
+    const gas = '' + Math.max(+transData.gas, 30000);
     const gasPrice = '' + (Math.max(+transData.gasPrice, 0) || await this.web3Client.getCurrentGasPrice());
     const txInput = {
       from: user.wallets[0].address,
@@ -176,19 +186,19 @@ export class TransactionApplication {
       this.logger.debug('Prepare to send ethereums', user.email);
 
       signedTransaction = await this.web3Client.signTransactionByAccount({
-          from: account.address,
-          to: txInput.to,
-          amount: txInput.amount,
-          gas,
-          gasPrice: txInput.gasPrice
-        },
+        from: account.address,
+        to: txInput.to,
+        amount: txInput.amount,
+        gas,
+        gasPrice: txInput.gasPrice
+      },
         account
       );
     }
 
     this.logger.debug('Init verification', user.email, transData.type, transData.to);
 
-    const initiateVerification = this.newInitiateVerification(VerifyScope.TRANSACTION_SEND, user.email);
+    const initiateVerification = this.newInitiateVerification(Verifications.TRANSACTION_SEND, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
       buildScopeEmailVerificationInitiate(
         initiateVerification,
@@ -211,7 +221,11 @@ export class TransactionApplication {
       type: transData.type
     };
 
-    const {verifyInitiated} = await this.verifyAction.initiate(initiateVerification, txPayload);
+    if (!user.isVerificationEnabled(Verifications.TRANSACTION_SEND)) {
+      initiateVerification.setMethod(VerifyMethod.INLINE);
+    }
+
+    const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, txPayload);
     return verifyInitiated;
   }
 
@@ -223,7 +237,7 @@ export class TransactionApplication {
   async transactionSendVerify(verify: VerificationInput, user: User): Promise<any> {
     this.logger.debug('Check transaction verification', user.email);
 
-    const { verifyPayload } = await this.verifyAction.verify(VerifyScope.TRANSACTION_SEND, verify.verification);
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.TRANSACTION_SEND, verify.verification);
     const txPayload = verifyPayload as TransactionSendPayload;
 
     this.logger.debug('Execute send transaction for', user.email, txPayload.type, txPayload.to);
@@ -236,7 +250,7 @@ export class TransactionApplication {
     const transaction = Transaction.createTransaction({
       ...txPayload,
       transactionHash,
-      details: JSON.stringify({gas: txPayload.gas, gasPrice: txPayload.gasPrice}),
+      details: JSON.stringify({ gas: txPayload.gas, gasPrice: txPayload.gasPrice }),
       status: TRANSACTION_STATUS_PENDING
     });
     transaction.timestamp = ~~(+new Date() / 1000);

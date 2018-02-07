@@ -124,6 +124,7 @@ declare interface UserData {
 
 declare interface InputUserData extends UserData {
   password: string;
+  paymentPassword: string;
 }
 
 declare interface Wallet {

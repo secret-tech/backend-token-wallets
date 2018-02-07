@@ -17,7 +17,7 @@ export class UserRepository {
     return getMongoManager().createEntityCursor(User, {
       'wallets.address': {
         $in: walletAddresses
-      },
+      }
     }).project({
       'wallets.address': 1,
       'wallets.ticker': 1

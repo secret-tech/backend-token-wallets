@@ -14,6 +14,11 @@ import { PrometheusMetrics } from '../services/metrics/prometheus.service';
   'MetricsBasicHttpAuth'
 )
 export class MetricsController {
+  /**
+   *
+   * @param req
+   * @param res
+   */
   @httpGet(
     '/prometheus'
   )

@@ -61,7 +61,7 @@ export class DashboardApplication {
   getErc20TokenInfo(contractAddress: string): Promise<any> {
     this.logger.debug('Request token info for', contractAddress);
 
-    return dashboardCache.run('erc20info' + contractAddress, async () => {
+    return dashboardCache.run('erc20info' + contractAddress, async() => {
       const regToken = await this.tokensRepository.getByContractAddress(contractAddress);
       if (regToken) {
         return regToken;

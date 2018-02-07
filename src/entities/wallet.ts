@@ -12,6 +12,9 @@ export class Wallet {
   balance: string;
 
   @Column()
+  securityKey: string;
+
+  @Column()
   salt: string;
 
   @Column()
@@ -22,6 +25,7 @@ export class Wallet {
 
   static createWallet(data: any) {
     const wallet = new Wallet();
+    wallet.securityKey = data.securityKey;
     wallet.ticker = data.ticker;
     wallet.address = data.address;
     wallet.balance = data.balance || 0;

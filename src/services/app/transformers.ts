@@ -40,5 +40,5 @@ export function transformWallet(wallet: Wallet): any {
     ticker: wallet.ticker,
     address: wallet.address,
     tokens: wallet.tokens
-  }
+  };
 }

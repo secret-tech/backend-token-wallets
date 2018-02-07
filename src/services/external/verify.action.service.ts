@@ -1,15 +1,73 @@
 import { inject, injectable } from 'inversify';
+import * as uuid from 'node-uuid';
 import * as redis from 'redis';
 import * as moment from 'moment';
+import * as LRU from 'lru-cache';
 
 import config from '../../config';
 
 import { VerificationClientType, VerificationClientInterface } from '../external/verify.client';
-import { VerifyAction, VerifyMethod } from '../../entities/verify.action';
 import { Logger } from '../../logger';
 import { getMongoRepository } from 'typeorm';
 import { VerificationInitiateContext } from './verify.context.service';
-import { VerificationIsNotFound } from '../../exceptions';
+import { VerificationIsNotFound, MaxVerificationsAttemptsReached, NotCorrectVerificationCode } from '../../exceptions';
+
+export enum VerifyMethod {
+  INLINE = 'inline',
+  AUTHENTICATOR = 'google_auth',
+  EMAIL = 'email'
+}
+
+export enum Verifications {
+  USER_SIGNUP = 'user_signup',
+  USER_SIGNIN = 'user_signin',
+  USER_CHANGE_PASSWORD = 'user_change_password',
+  USER_RESET_PASSWORD = 'user_reset_password',
+  USER_ENABLE_GOOGLE_AUTH = 'user_enable_google_auth',
+  USER_DISABLE_GOOGLE_AUTH = 'user_disable_google_auth',
+
+  USER_CHANGE_VERIFICATIONS = 'user_change_verifications',
+
+  TRANSACTION_SEND = 'transaction_send'
+}
+
+export function getAllVerifications() {
+  return [
+    Verifications.USER_SIGNUP,
+    Verifications.USER_SIGNIN,
+    Verifications.USER_CHANGE_PASSWORD,
+    Verifications.USER_RESET_PASSWORD,
+    Verifications.USER_ENABLE_GOOGLE_AUTH,
+    Verifications.USER_DISABLE_GOOGLE_AUTH,
+    Verifications.TRANSACTION_SEND
+  ];
+}
+
+export function getAllAllowedVerifications() {
+  return [
+    Verifications.USER_SIGNIN,
+    Verifications.USER_CHANGE_PASSWORD,
+    Verifications.TRANSACTION_SEND
+  ];
+}
+
+export class VerifyAction {
+  verificationId: string;
+  method: string;
+  scope: string;
+  expiredOn: number;
+  payload: string;
+
+  static createVerification(data: any) {
+    const verification = new VerifyAction();
+    verification.verificationId = data.verificationId;
+    verification.expiredOn = data.expiredOn;
+    verification.payload = data.payload;
+    verification.scope = data.scope;
+    verification.method = data.method;
+    return verification;
+  }
+}
 
 /**
  * Verify Action Service
@@ -18,6 +76,7 @@ import { VerificationIsNotFound } from '../../exceptions';
 export class VerifyActionService {
   private logger = Logger.getInstance('VERIFY_ACTION');
   private redisClient: redis.RedisClient;
+  private verifyPayloads: LRU;
 
   /**
    * @param verificationClient
@@ -29,16 +88,20 @@ export class VerifyActionService {
       prefix: config.redis.prefix + '_va_',
       retry_strategy: (options) => {
         if (options.error && options.error.code === 'ECONNREFUSED') {
-            return new Error('The server refused the connection');
+          return new Error('The server refused the connection');
         }
         if (options.total_retry_time > 1000 * 60) {
-            return new Error('Retry time exhausted');
+          return new Error('Retry time exhausted');
         }
         if (options.attempt > 10) {
-            return undefined;
+          return undefined;
         }
         return Math.min(options.attempt * 100, 3000);
       }
+    });
+    this.verifyPayloads = LRU({
+      max: 16384,
+      maxAge: 60000
     });
   }
 
@@ -97,6 +160,25 @@ export class VerifyActionService {
   async initiate(context: VerificationInitiateContext, payload?: any):
   Promise<{verifyInitiated: InitiatedVerification, verifyInitiatedResult: InitiateResult}> {
 
+    if (context.getMethod() === VerifyMethod.INLINE) {
+      // @TODO: Maybe better only uuid
+      const verifyId = uuid.v4() + '-01';
+      this.verifyPayloads.set(verifyId, payload);
+      return {
+        verifyInitiated: {
+          verificationId: verifyId,
+          method: 'inline'
+        },
+        verifyInitiatedResult: {
+          verificationId: verifyId,
+          method: 'inline',
+          status: 200,
+          attempts: 0,
+          expiredOn: 0
+        }
+      };
+    }
+
     const initiateVerificationRequest = context.getVerificationInitiate();
     const initiateResult = await this.verificationClient.initiateVerification(
       context.getMethod(), initiateVerificationRequest
@@ -134,6 +216,17 @@ export class VerifyActionService {
    */
   async verify(scope: string, verification: VerificationData, customArgs?: any):
   Promise<{ verifyPayload: any, verifyResult: ValidationResult }> {
+    if (this.verifyPayloads.has(verification.verificationId)) {
+      const payload = this.verifyPayloads.get(verification.verificationId);
+      this.verifyPayloads.del(verification.verificationId);
+      return {
+        verifyPayload: payload,
+        verifyResult: {
+          status: 200
+        }
+      };
+    }
+
     const verifyAction = await this.getAction(verification.verificationId);
 
     if (!verifyAction) {
@@ -159,7 +252,7 @@ export class VerifyActionService {
         verifyResult
       };
     } catch (err) {
-      if (err instanceof VerificationIsNotFound) {
+      if (!(err instanceof NotCorrectVerificationCode)) {
         this.delAction(verification.verificationId).catch(e => this.logger.error);
       }
       throw err;

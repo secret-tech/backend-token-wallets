@@ -5,10 +5,11 @@ import initiateSignUpTemplate from './resources/emails/1_initiate_signup';
 import initiateSignInCodeTemplate from './resources/emails/3_initiate_signin_code';
 import initiatePasswordResetTemplate from './resources/emails/6_initiate_password_reset_code';
 import initiatePasswordChangeTemplate from './resources/emails/27_initiate_password_change_code';
+import initiateChangeVerificationsTemplate from './resources/emails/29_initiate_change_verify_code';
 import initiateTransactionTemplate from './resources/emails/12_initiate_transaction_code';
 
 import { User } from './entities/user';
-import { VerifyMethod } from './entities/verify.action';
+import { Verifications, VerifyMethod } from './services/external/verify.action.service';
 
 const defaultInit = {
   issuer: 'Jincor',
@@ -17,17 +18,6 @@ const defaultInit = {
     'DIGITS'
   ]
 };
-
-export enum VerifyScope {
-  USER_SIGNUP = 'activate_user',
-  USER_SIGNIN = 'login_user',
-  USER_CHANGE_PASSWORD = 'change_password',
-  USER_RESET_PASSWORD = 'reset_password',
-  USER_ENABLE_2FA = 'enable_2fa',
-  USER_DISABLE_2FA = 'disable_2fa',
-
-  TRANSACTION_SEND = 'transaction_send'
-}
 
 /**
  *
@@ -38,20 +28,22 @@ function buildVerificationInitiate(verify: VerificationInitiateContext, context:
   verify.setGenerateCode(defaultInit.symbolSet, defaultInit.length);
 
   switch (verify.getScope()) {
-
-    case VerifyScope.USER_SIGNIN:
+    case Verifications.USER_SIGNIN:
     // no break
 
-    case VerifyScope.USER_RESET_PASSWORD:
+    case Verifications.USER_RESET_PASSWORD:
     // no break
 
-    case VerifyScope.USER_ENABLE_2FA:
+    case Verifications.USER_ENABLE_GOOGLE_AUTH:
     // no break
 
-    case VerifyScope.USER_DISABLE_2FA:
+    case Verifications.USER_DISABLE_GOOGLE_AUTH:
     // no break
 
-    case VerifyScope.TRANSACTION_SEND:
+    case Verifications.USER_CHANGE_VERIFICATIONS:
+    // no break
+
+    case Verifications.TRANSACTION_SEND:
 
       return verify.setExpiredOn('01:00:00');
 
@@ -73,7 +65,7 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
 
   switch (verify.getScope()) {
 
-    case VerifyScope.USER_SIGNUP:
+    case Verifications.USER_SIGNUP:
       const encodedEmail = encodeURIComponent(context.to);
       const link = `${config.app.frontendPrefixUrl}/auth/signup?type=activate&code={{{CODE}}}&verificationId={{{VERIFICATION_ID}}}&email=${encodedEmail}`;
 
@@ -83,7 +75,7 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
         body: initiateSignUpTemplate(context.name, link)
       });
 
-    case VerifyScope.USER_SIGNIN:
+    case Verifications.USER_SIGNIN:
 
       return verify.setEmail({
         to: context.user.email,
@@ -91,7 +83,7 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
         body: initiateSignInCodeTemplate(context.user.name, new Date().toUTCString(), context.ip)
       });
 
-    case VerifyScope.USER_CHANGE_PASSWORD:
+    case Verifications.USER_CHANGE_PASSWORD:
 
       return verify.setEmail({
         to: context.user.email,
@@ -99,7 +91,7 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
         body: initiatePasswordChangeTemplate(context.user.name)
       });
 
-    case VerifyScope.USER_RESET_PASSWORD:
+    case Verifications.USER_RESET_PASSWORD:
 
       return verify.setEmail({
         to: context.user.email,
@@ -107,18 +99,26 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
         body: initiatePasswordResetTemplate(context.user.name)
       });
 
-    case VerifyScope.TRANSACTION_SEND:
+    case Verifications.USER_CHANGE_VERIFICATIONS:
 
       return verify.setEmail({
         to: context.user.email,
-        subject: 'You Transaction Validation Code to Use',
+        subject: 'Here’s the Code to Change Verifications',
+        body: initiateChangeVerificationsTemplate(context.user.name)
+      });
+
+    case Verifications.TRANSACTION_SEND:
+
+      return verify.setEmail({
+        to: context.user.email,
+        subject: 'Your Transaction Validation Code to Use',
         body: initiateTransactionTemplate(context.user.name, context.transactionType)
       });
 
-    case VerifyScope.USER_ENABLE_2FA:
+    case Verifications.USER_ENABLE_GOOGLE_AUTH:
     // no break
 
-    case VerifyScope.USER_DISABLE_2FA:
+    case Verifications.USER_DISABLE_GOOGLE_AUTH:
     // no break
 
     default:

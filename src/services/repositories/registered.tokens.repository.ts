@@ -3,12 +3,17 @@ import { injectable } from 'inversify';
 
 import { RegisteredToken } from '../../entities/registered.token';
 
+export enum RegisteredTokenScope {
+  Local = '',
+  Global = 'global'
+}
+
 /**
  *
  */
 export interface RegisteredTokenRepositoryInterface {
   save(tx: RegisteredToken): Promise<RegisteredToken>;
-  getAll(scope?: string): Promise<RegisteredToken[]>;
+  getAllByScope(scope?: string): Promise<RegisteredToken[]>;
   getByContractAddress(address: string): Promise<RegisteredToken>;
 }
 
@@ -25,13 +30,12 @@ export class RegisteredTokenRepository implements RegisteredTokenRepositoryInter
     return getConnection().getMongoRepository(RegisteredToken).save(tx);
   }
 
-  getAll(scope?: string): Promise<RegisteredToken[]> {
-    return getConnection().getMongoRepository(RegisteredToken).find({
-      scope: scope || '',
-      order: {
-        symbol: 1
-      }
-    });
+  getAllByScope(scope?: string): Promise<RegisteredToken[]> {
+    return getConnection().getMongoRepository(RegisteredToken).createCursor({
+      scope: scope || RegisteredTokenScope.Local
+    })
+    .sort('symbol', 1)
+    .toArray();
   }
 
   getByContractAddress(contractAddress: string): Promise<RegisteredToken> {

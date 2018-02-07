@@ -1,7 +1,7 @@
 import config from '../../config';
 
 import { VerificationClientInterface } from './verify.client';
-import { VerifyMethod } from '../../entities/verify.action';
+import { VerifyMethod } from './verify.action.service';
 
 /**
  *
@@ -39,7 +39,11 @@ export class VerificationInitiateContext {
     };
   }
 
-  setMethod(method: VerifyMethod) {
+  /**
+   *
+   * @param method
+   */
+  setMethod(method: string) {
     this.method = method;
     return this;
   }

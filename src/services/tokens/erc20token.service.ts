@@ -62,7 +62,7 @@ export class Erc20TokenService {
         methodName: 'decimals',
         gasPrice: '0',
         arguments: []
-      }).catch(e => this.catchInfoError('decimals', e)),
+      }).catch(e => this.catchInfoError('decimals', e))
     ]).then(([name, symbol, decimals]) => {
       return {
         name,
