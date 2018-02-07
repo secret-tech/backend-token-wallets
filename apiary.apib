@@ -32,6 +32,7 @@ User's email must be verified after registration. Next step after calling this e
                 "email": "ortga@gmail.com",
                 "name": "John Smith",
                 "password": "test12A6!@#$%^&*()_-=+|/",
+                "paymentPassword": "payment12A6!@#$%^&*()_-=+|/",
                 "agreeTos": true,
                 "source": {
                 "utm": "utm",
@@ -68,7 +69,7 @@ User's email must be verified after registration. Next step after calling this e
 
 This endpoint response with JWT token so user can be immediately redirected to dashboard.
 JWT token received by `/activate` DOES NOT require verification.
-This endpoint's response also contains VERY important information: mnemonic phrase and private key of
+This endpoint's response also contains VERY important information: mnemonic and private key of
 user's ethereum address. This information should be saved by user. If user loses this he will also LOSE
 access to his wallet of ICO dashboard.
 
@@ -327,6 +328,108 @@ Authentication attempts with not verified token will result in 401 response.
             "error": "User is not found"
         }
 
+## Set notifications state [/user/preferences/notifications]
+
+### Set notifications state [POST]
+
++ notifications (required, object of booleans). Allowed keys: user_signin, user_change_password, user_reset_password.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer token
+            Accept: application/json
+
+    + Body
+
+            {
+                "notifications": {
+                    "user_signin": false,
+                    "user_change_password": false,
+                    "user_reset_password": true
+                }
+            }
+
+
++ Response 200 (application/json)
+
+        {
+            "notifications": {
+                "user_signin": false,
+                "user_change_password": false,
+                "user_reset_password": true
+            }
+        }
+
+## Initiate set verifications state [/user/preferences/verifications/initiate]
+
+When verification is disabled the method in { verification : { verificationId: '...', method: 'inline' } will be `inline` only.
+For inline method you should pass any code (random) for verify action.
+
+### Initiate set verifications state [POST]
+
++ verifications (required, object of booleans). Allowed keys: user_signin, user_change_password, transaction_send.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer token
+            Accept: application/json
+
+    + Body
+
+            {
+                "verifications": {
+                    "user_signin": false,
+                    "user_change_password": false,
+                    "transaction_send": true
+                }
+            }
+
++ Response 200 (application/json)
+
+        {
+            "verification": {
+                "verificationId": "8f9ba03c-e903-459c-adb9-7594865a03a4",
+                "method": "email"
+            }
+        }
+
+## Verify set verifications state [/user/preferences/disableVerifications/verify]
+
++ verification
+    + verificationId `UUID` (required, string)
+    + code `000000` (required, string)
+
+### Verify set verifications state [POST]
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer token
+            Accept: application/json
+
+    + Body
+
+            {
+                "verification": {
+                    "verificationId": "b41498d8-a9db-4bb5-b338-0e8f47582066",
+                    "code": "813365"
+                }
+            }
+
++ Response 200 (application/json)
+
+        {
+            "verifications": {
+                "user_signin": false,
+                "user_change_password": false,
+                "transaction_send": true
+            }
+        }
 
 ## Initiate enable 2FA [/user/enable2fa/initiate]
 
@@ -490,6 +593,18 @@ Authentication attempts with not verified token will result in 401 response.
                     "decimals": 18
                 }
             ],
+            "preferences": {
+                "notifications": {
+                    "user_signin": false,
+                    "user_change_password": false
+                    "user_reset_password": true
+                },
+                "verifications": {
+                    "user_signin": false,
+                    "user_change_password": false
+                    "transaction_send": true
+                }
+            },
             "email": "existing@test.com",
             "name": "John Smith",
             "defaultVerificationMethod": "email"
@@ -664,9 +779,10 @@ Authentication attempts with not verified token will result in 401 response.
 ## Initiate transaction [/dashboard/transaction/initiate]
 
 + amount `1` (required, number, min(1e-10))
-+ mnemonic `mnemonic` (required, string)
++ paymentPassword `payment12A6` (required, string)
 + type `eth_transfer` (required, string in (`eth_transfer`, `erc20_transfer`))
 + to (required, string) Destination wallet address
++ gas (optional, string) Customization of gas limit
 + gasPrice (optional, string) Customization of gas price
 
 ### Initiate transaction [POST]
@@ -682,7 +798,7 @@ Authentication attempts with not verified token will result in 401 response.
 
             {
                 "amount": 1000,
-                "mnemonic": "mnemonic"
+                "paymentPassword": "payment12A6"
                 "type": "erc20_transfer",
                 "contractAddress": "0xc20f363f721fe8b35cc2aafd18df7156c775d642",
                 "to": "0x81c51b9c45D38f3AAB102a430D8aDFFF0523dCFe"

@@ -16,20 +16,24 @@ import {
   UserExists,
   UserNotFound,
   InvalidPassword,
-  TokenNotFound
+  TokenNotFound,
+  AuthenticatorError
 } from '../../../exceptions';
 import { User } from '../../../entities/user';
 import { VerifiedToken } from '../../../entities/verified.token';
 import * as transformers from '../transformers';
-import { generateMnemonic } from '../../crypto';
+import { generateMnemonic, MasterKeySecret, getSha256HexHash, getUserMasterKey, encryptText, getRecoveryMasterKey, decryptTextByRecoveryMasterKey } from '../../crypto';
 import { Logger } from '../../../logger';
 import { UserRepositoryType, UserRepositoryInterface } from '../../repositories/user.repository';
-import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface } from '../../repositories/registered.tokens.repository';
-import { VerifyScope, buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../../verify.cases';
+import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface, RegisteredTokenScope } from '../../repositories/registered.tokens.repository';
+import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../../verify.cases';
 import { VerificationInitiateContext } from '../../external/verify.context.service';
 import { Wallet } from '../../../entities/wallet';
-import { VerifyActionServiceType, VerifyActionService } from '../../external/verify.action.service';
-import { VerifyMethod } from '../../../entities/verify.action';
+import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod, getAllVerifications } from '../../external/verify.action.service';
+import { Token } from '../../../entities/token';
+import { writeFileSync, readFileSync, writeFile } from 'fs';
+import { join } from 'path';
+import { Notifications, Preferences, getAllNotifications, BooleanState } from '../../../entities/preferences';
 
 /**
  * UserAccountApplication
@@ -67,6 +71,28 @@ export class UserAccountApplication {
     return transformers.transformCreatedUser(user, verifyInitiated);
   }
 
+  private createNewWallet(user: User, paymentPassword: string) {
+    this.logger.debug('Create new wallet for', user.email);
+
+    const mnemonic = generateMnemonic();
+    const salt = bcrypt.genSaltSync();
+    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
+
+    // should be created every time for fresh master key
+    const msc = new MasterKeySecret();
+
+    user.addWallet(Wallet.createWallet({
+      ticker: 'ETH',
+      address: account.address,
+      balance: '0',
+      tokens: [],
+      // hacky way
+      securityKey: JSON.stringify([getUserMasterKey(msc, paymentPassword), getRecoveryMasterKey(msc)]),
+      salt: encryptText(msc, salt),
+      mnemonic: encryptText(msc, mnemonic)
+    }));
+  }
+
   /**
    * Save user's data
    * Note! Use throttler or captcha to prevent spam
@@ -75,8 +101,12 @@ export class UserAccountApplication {
    * @return promise
    */
   async create(userData: InputUserData): Promise<CreatedUserData> {
+    if (userData.password === userData.paymentPassword) {
+      throw new InvalidPassword('Login and payment passwords are matched');
+    }
+
     const initiateVerification = buildScopeEmailVerificationInitiate(
-      this.newInitiateVerification(VerifyScope.USER_SIGNUP, userData.email),
+      this.newInitiateVerification(Verifications.USER_SIGNUP, userData.email),
       { email: userData.email, name: userData.name }
     );
 
@@ -101,9 +131,58 @@ export class UserAccountApplication {
     });
     user.passwordHash = bcrypt.hashSync(userData.password);
 
+    this.createNewWallet(user, userData.paymentPassword);
+
+    this.logger.debug('Save user', user.email);
+
     await this.userRepository.save(user);
 
     return this.initiateCreateAndReturnUser(user, initiateVerification);
+  }
+
+  private async addGlobalRegisteredTokens(user: User) {
+    this.logger.debug('Fill known global tokens and set verified for', user.email);
+
+    const registeredTokens = await this.tokensRepository.getAllByScope(RegisteredTokenScope.Global);
+
+    user.wallets[0].tokens = registeredTokens.map(rt => Token.createToken({
+      contractAddress: rt.contractAddress,
+      symbol: rt.symbol,
+      name: rt.name,
+      decimals: rt.decimals
+    }));
+  }
+
+  private async activateUserAndGetNewWallets(user: User): Promise<NewWallet[]> {
+    this.logger.debug('Save user state', user.email);
+
+    const [userKey, recoveryKey] = JSON.parse(user.wallets[0].securityKey);
+    user.wallets[0].securityKey = userKey;
+    user.isVerified = true;
+
+    await this.userRepository.save(user);
+
+    this.logger.debug('Save recovery key for', user.email);
+
+    // @TODO: Save in more secure space
+    writeFile(join(config.crypto.recoveryFolder, getSha256HexHash(user.email)), recoveryKey);
+
+    this.logger.debug('Prepare response wallets for', user.email);
+
+    const msc = new MasterKeySecret();
+    const mnemonic = decryptTextByRecoveryMasterKey(msc, user.wallets[0].mnemonic, recoveryKey);
+    const salt = decryptTextByRecoveryMasterKey(msc, user.wallets[0].salt, recoveryKey);
+
+    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
+
+    return [{
+      ticker: 'ETH',
+      address: account.address,
+      tokens: [],
+      balance: '0',
+      mnemonic,
+      privateKey: account.privateKey
+    }];
   }
 
   /**
@@ -113,7 +192,7 @@ export class UserAccountApplication {
   async activate(verify: VerificationInput): Promise<ActivationResult> {
     this.logger.debug('Verify and activate user');
 
-    const { verifyPayload } = await this.verifyAction.verify(VerifyScope.USER_SIGNUP, verify.verification);
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_SIGNUP, verify.verification);
 
     const user = await getConnection().getMongoRepository(User).findOne({
       email: verifyPayload.userEmail
@@ -122,7 +201,6 @@ export class UserAccountApplication {
     if (!user) {
       throw new UserNotFound('User is not found');
     }
-
     if (user.isVerified) {
       throw new UserExists('User already verified');
     }
@@ -130,23 +208,6 @@ export class UserAccountApplication {
     this.logger.debug('Register new user in auth service', verifyPayload.userEmail);
 
     await this.authClient.createUser(transformers.transformUserForAuth(user));
-
-    this.logger.debug('Update and create wallets for', user.email);
-
-    const mnemonic = generateMnemonic();
-    const salt = bcrypt.genSaltSync();
-    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
-
-    user.isVerified = true;
-    user.addWallet(Wallet.createWallet({
-      ticker: 'ETH',
-      address: account.address,
-      balance: '0',
-      tokens: [],
-      salt
-    }));
-
-    await this.userRepository.save(user);
 
     this.logger.debug('Get auth token for activated user', user.email);
 
@@ -156,10 +217,12 @@ export class UserAccountApplication {
       deviceId: 'device'
     });
 
+    await this.addGlobalRegisteredTokens(user);
+    const newWallets = await this.activateUserAndGetNewWallets(user);
+
     this.logger.debug('Save verified token for activated user', user.email);
 
     const token = VerifiedToken.createVerifiedToken(user, loginResult.accessToken);
-
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
     this.emailQueue.addJob({
@@ -169,18 +232,9 @@ export class UserAccountApplication {
       text: successSignUpTemplate(user.name)
     });
 
-    const resultWallets: Array<NewWallet> = [{
-      ticker: 'ETH',
-      address: account.address,
-      tokens: [],
-      balance: '0',
-      mnemonic: mnemonic,
-      privateKey: account.privateKey
-    }];
-
     return {
       accessToken: token.token,
-      wallets: resultWallets
+      wallets: newWallets
     };
   }
 
@@ -214,12 +268,16 @@ export class UserAccountApplication {
 
     this.logger.debug('Initiate login', user.email);
 
-    const initiateVerification = this.newInitiateVerification(VerifyScope.USER_SIGNIN, user.email);
+    const initiateVerification = this.newInitiateVerification(Verifications.USER_SIGNIN, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
       buildScopeEmailVerificationInitiate(
         initiateVerification,
         { ip, user }
       );
+    }
+
+    if (!user.isVerificationEnabled(Verifications.USER_SIGNIN)) {
+      initiateVerification.setMethod(VerifyMethod.INLINE);
     }
 
     const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
@@ -250,7 +308,7 @@ export class UserAccountApplication {
   async verifyLogin(verify: VerificationInput): Promise<VerifyLoginResult> {
     this.logger.debug('Verify user login');
 
-    const { verifyPayload } = await this.verifyAction.verify(VerifyScope.USER_SIGNIN, verify.verification);
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_SIGNIN, verify.verification);
 
     const token = await getConnection().getMongoRepository(VerifiedToken).findOne({
       token: verifyPayload.accessToken
@@ -266,14 +324,180 @@ export class UserAccountApplication {
 
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
-    this.emailQueue.addJob({
-      sender: config.email.from.general,
-      subject: 'Successful Login Notification',
-      recipient: verifyPayload.userEmail,
-      text: successSignInTemplate(verifyPayload.userName, new Date().toUTCString())
-    });
+    const user = await getConnection().getMongoRepository(User).findOneById(token.userId);
+    if (!user) {
+      throw new TokenNotFound('Access token is not any match with user');
+    }
+
+    if (user.isNotificationEnabled(Notifications.USER_SIGNIN)) {
+      this.emailQueue.addJob({
+        sender: config.email.from.general,
+        subject: 'Successful Login Notification',
+        recipient: verifyPayload.userEmail,
+        text: successSignInTemplate(verifyPayload.userName, new Date().toUTCString())
+      });
+    }
 
     return transformers.transformVerifiedToken(token);
+  }
+
+  /**
+   *
+   * @param user
+   * @param scope
+   */
+  private async initiateGoogleAuthVerification(user: User, scope: Verifications): Promise<InitiatedVerification> {
+    this.logger.debug('Initiate attempt to change GoogleAuth', user.email, scope);
+
+    const { verifyInitiated } = await this.verifyAction.initiate(this.newInitiateVerification(scope, user.email), {
+      userEmail: user.email
+    });
+
+    return verifyInitiated;
+  }
+
+  /**
+   *
+   * @param user
+   * @param scope
+   * @param verify
+   */
+  private async verifyAndToggleGoogleAuth(user: User, scope: Verifications, verify: VerificationInput): Promise<any> {
+    this.logger.debug('Verify attempt to change GoogleAuth', user.email, user.defaultVerificationMethod);
+
+    const { verifyPayload } = await this.verifyAction.verify(scope, verify.verification, {
+      removeSecret: scope === Verifications.USER_DISABLE_GOOGLE_AUTH
+    });
+
+    user.defaultVerificationMethod = scope === Verifications.USER_DISABLE_GOOGLE_AUTH ?
+      VerifyMethod.EMAIL : VerifyMethod.AUTHENTICATOR;
+
+    this.logger.debug('Save state GoogleAuth', user.email, user.defaultVerificationMethod);
+
+    await this.userRepository.save(user);
+
+    return scope === Verifications.USER_ENABLE_GOOGLE_AUTH;
+  }
+
+  /**
+   *
+   * @param user
+   */
+  async initiateEnableGoogleAuth(user: User): Promise<BaseInitiateResult> {
+    if (user.defaultVerificationMethod === VerifyMethod.AUTHENTICATOR) {
+      throw new AuthenticatorError('GoogleAuth is enabled already.');
+    }
+
+    return {
+      verification: await this.initiateGoogleAuthVerification(user, Verifications.USER_ENABLE_GOOGLE_AUTH)
+    };
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async verifyEnableGoogleAuth(user: User, verify: VerificationInput): Promise<any> {
+    if (user.defaultVerificationMethod === VerifyMethod.AUTHENTICATOR) {
+      throw new AuthenticatorError('GoogleAuth is enabled already.');
+    }
+
+    return {
+      enabled: await this.verifyAndToggleGoogleAuth(user, Verifications.USER_ENABLE_GOOGLE_AUTH, verify)
+    };
+  }
+
+  /**
+   *
+   * @param user
+   */
+  async initiateDisableGoogleAuth(user: User): Promise<BaseInitiateResult> {
+    if (user.defaultVerificationMethod !== VerifyMethod.AUTHENTICATOR) {
+      throw new AuthenticatorError('GoogleAuth is disabled already.');
+    }
+
+    return {
+      verification: await this.initiateGoogleAuthVerification(user, Verifications.USER_DISABLE_GOOGLE_AUTH)
+    };
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async verifyDisableGoogleAuth(user: User, verify: VerificationInput): Promise<any> {
+    if (user.defaultVerificationMethod !== VerifyMethod.AUTHENTICATOR) {
+      throw new AuthenticatorError('GoogleAuth is disabled already.');
+    }
+
+    return {
+      enabled: await this.verifyAndToggleGoogleAuth(user, Verifications.USER_DISABLE_GOOGLE_AUTH, verify)
+    };
+  }
+
+  /**
+   *
+   * @param user
+   */
+  async setNotifications(user: User, notifications: BooleanState): Promise<any> {
+    this.logger.debug('Set disabled notifications for', user.email);
+
+    user.preferences = user.preferences || new Preferences();
+    user.preferences.setNotifications(notifications);
+
+    this.logger.debug('Save user notifications', user.email, notifications);
+
+    await this.userRepository.save(user);
+
+    return {
+      notifications: user.preferences.notifications
+    };
+  }
+
+  /**
+   *
+   * @param user
+   */
+  async initiateSetVerifications(user: User, verifications: BooleanState): Promise<any> {
+    this.logger.debug('Initiate change verifications', user.email);
+
+    const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_VERIFICATIONS, user.email);
+    if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
+      buildScopeEmailVerificationInitiate(
+        initiateVerification,
+        { user }
+      );
+    }
+
+    const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
+      verifications
+    });
+
+    return verifyInitiated;
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async verifySetVerifications(user: User, verify: VerificationInput): Promise<any> {
+    this.logger.debug('Verify change verifications', user.email);
+
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_VERIFICATIONS, verify.verification);
+
+    user.preferences = user.preferences || new Preferences();
+    user.preferences.setVerifications(verifyPayload.verifications);
+
+    this.logger.debug('Save user verifications', user.email, verifyPayload.verifications);
+
+    await this.userRepository.save(user);
+
+    return {
+      verifications: user.preferences.verifications
+    };
   }
 }
 

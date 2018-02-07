@@ -16,6 +16,9 @@ const defaultOptions = {
   whiteList: whiteList
 };
 
+/**
+ * Throttler middleware. Should be singleton (for single redis connection).
+ */
 @injectable()
 export class ThrottlerMiddleware extends BaseMiddleware {
   private limiter: RateLimiter;
@@ -32,13 +35,13 @@ export class ThrottlerMiddleware extends BaseMiddleware {
       prefix: config.redis.prefix + '_thm_',
       retry_strategy: (options) => {
         if (options.error && options.error.code === 'ECONNREFUSED') {
-            return new Error('The server refused the connection');
+          return new Error('The server refused the connection');
         }
         if (options.total_retry_time > 1000 * 60) {
-            return new Error('Retry time exhausted');
+          return new Error('Retry time exhausted');
         }
         if (options.attempt > 10) {
-            return undefined;
+          return undefined;
         }
         return Math.min(options.attempt * 100, 3000);
       }
@@ -52,7 +55,7 @@ export class ThrottlerMiddleware extends BaseMiddleware {
   }
 
   /**
-   *
+   * Default handler method.
    * @param req
    * @param res
    * @param next

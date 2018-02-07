@@ -19,11 +19,11 @@ import { User } from '../../../entities/user';
 import { VerifiedToken } from '../../../entities/verified.token';
 import { Logger } from '../../../logger';
 import { UserRepositoryType, UserRepositoryInterface } from '../../repositories/user.repository';
-import { VerifyScope, buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../../verify.cases';
+import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../../verify.cases';
 import { VerificationInitiateContext } from '../../external/verify.context.service';
-import { VerifyActionServiceType, VerifyActionService } from '../../external/verify.action.service';
-import { VerifyMethod } from '../../../entities/verify.action';
+import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../../external/verify.action.service';
 import { UserTimedId } from '../../timed.id';
+import { Notifications } from '../../../entities/preferences';
 
 /**
  * UserPasswordApplication
@@ -62,12 +62,16 @@ export class UserPasswordApplication {
 
     this.logger.debug('Initiate changing password', user.email);
 
-    const initiateVerification = this.newInitiateVerification(VerifyScope.USER_CHANGE_PASSWORD, user.email);
+    const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_PASSWORD, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
       buildScopeEmailVerificationInitiate(
         initiateVerification,
         { user }
       );
+    }
+
+    if (!user.isVerificationEnabled(Verifications.USER_CHANGE_PASSWORD)) {
+      initiateVerification.setMethod(VerifyMethod.INLINE);
     }
 
     const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
@@ -88,7 +92,7 @@ export class UserPasswordApplication {
 
     this.logger.debug('Verify atempt to change password', user.email);
 
-    const { verifyPayload } = await this.verifyAction.verify(VerifyScope.USER_CHANGE_PASSWORD, verify.verification);
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_PASSWORD, verify.verification);
 
     this.logger.debug('Save changed password', user.email);
 
@@ -96,12 +100,14 @@ export class UserPasswordApplication {
 
     await this.userRepository.save(user);
 
-    this.emailQueue.addJob({
-      sender: config.email.from.general,
-      recipient: user.email,
-      subject: 'Password Change Notification',
-      text: successPasswordChangeTemplate(user.name)
-    });
+    if (user.isNotificationEnabled(Notifications.USER_CHANGE_PASSWORD)) {
+      this.emailQueue.addJob({
+        sender: config.email.from.general,
+        recipient: user.email,
+        subject: 'Password Change Notification',
+        text: successPasswordChangeTemplate(user.name)
+      });
+    }
 
     this.logger.debug('Recreate user with changed password in auth', user.email);
 
@@ -144,7 +150,7 @@ export class UserPasswordApplication {
 
     this.logger.debug('Initiate reset password', user.email);
 
-    const initiateVerification = this.newInitiateVerification(VerifyScope.USER_RESET_PASSWORD, user.email);
+    const initiateVerification = this.newInitiateVerification(Verifications.USER_RESET_PASSWORD, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
       buildScopeEmailVerificationInitiate(
         initiateVerification,
@@ -176,7 +182,7 @@ export class UserPasswordApplication {
 
     this.logger.debug('Verify attempt to reset password', user.email);
 
-    const { verifyPayload } = await this.verifyAction.verify(VerifyScope.USER_RESET_PASSWORD, params.verification);
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_RESET_PASSWORD, params.verification);
 
     if (user.email !== verifyPayload.userEmail) {
       throw new UserNotFound('User is not found');
@@ -184,7 +190,7 @@ export class UserPasswordApplication {
 
     return {
       email: user.email,
-      resetId: this.resetPasswordId.generateId(user.id.toString() + user.passwordHash),
+      resetId: this.resetPasswordId.generateId(user.id.toString() + user.passwordHash)
     };
   }
 
@@ -219,16 +225,18 @@ export class UserPasswordApplication {
       sub: user.id.toString()
     });
 
-    this.emailQueue.addJob({
-      sender: config.email.from.general,
-      recipient: user.email,
-      subject: 'Password Reset Notification',
-      text: successPasswordResetTemplate(user.name)
-    });
+    if (user.isNotificationEnabled(Notifications.USER_RESET_PASSWORD)) {
+      this.emailQueue.addJob({
+        sender: config.email.from.general,
+        recipient: user.email,
+        subject: 'Password Reset Notification',
+        text: successPasswordResetTemplate(user.name)
+      });
+    }
 
     return {
       isReset: true
-    }
+    };
   }
 }
 

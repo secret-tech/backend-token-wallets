@@ -40,7 +40,7 @@ function getTxStatusByReceipt(receipt: any): string {
   return TRANSACTION_STATUS_FAILED;
 }
 
-const CONCURRENT_BLOCK_PROCESS_COUNT = 2;
+const CONCURRENT_BLOCK_PROCESS_COUNT = 3;
 const CONCURRENT_TRANSACTIONS_PROCESS_COUNT = 4;
 const TRANSACTION_CHECKING_INTERVAL_TIME: number = 15000;
 
@@ -54,6 +54,11 @@ export class Web3Event implements Web3EventInterface {
   private lastCheckingBlock: number = 0;
 
   private erc20Abi: {
+    Events: {
+      Transfer: {
+        abi: any;
+      }
+    },
     transfer: {
       methodSignature: string;
       abi: any;
@@ -72,7 +77,13 @@ export class Web3Event implements Web3EventInterface {
     @inject(TransactionRepositoryType) private txRep: TransactionRepositoryInterface,
     @inject(UserRepositoryType) private userRep: UserRepositoryInterface
   ) {
+    // @TODO: Need to rewrite this, to use library to get signature from abi
     this.erc20Abi = {
+      Events: {
+        Transfer: {
+          abi: config.contracts.erc20Token.abi.filter(i => i.type === 'event' && i.name === 'Transfer').pop()
+        }
+      },
       transfer: {
         methodSignature: Web3Abi.encodeFunctionSignature('transfer(address,uint256)').slice(2),
         abi: config.contracts.erc20Token.abi.filter(i => i.type === 'function' && i.name === 'transfer').pop()
@@ -83,13 +94,13 @@ export class Web3Event implements Web3EventInterface {
       }
     };
 
-    switch (config.rpc.type) {
+    switch (config.web3.type) {
       case 'ipc':
-        this.web3 = new Web3(new Web3.providers.IpcProvider(config.rpc.address, net));
+        this.web3 = new Web3(new Web3.providers.IpcProvider(config.web3.address, net));
         break;
 
       case 'ws':
-        const webSocketProvider = new Web3.providers.WebsocketProvider(config.rpc.address);
+        const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
 
         webSocketProvider.connection.onclose = () => {
           this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
@@ -100,14 +111,14 @@ export class Web3Event implements Web3EventInterface {
         break;
 
       case 'http':
-        this.web3 = new Web3(config.rpc.address);
+        this.web3 = new Web3(config.web3.address);
         break;
 
       default:
         throw Error('Unknown Web3 RPC type!');
     }
 
-    if (config.rpc.type !== 'http') {
+    if (config.web3.type !== 'http') {
       this.attachEvents();
     }
 
@@ -123,7 +134,7 @@ export class Web3Event implements Web3EventInterface {
     const intervalExecuteMethod = () => {
       setTimeout(() => {
         this.checkTransactions()
-          .then(() => { }, (err) => { this.logger.error('Error was occurred', err); })
+          .then((a) => { return a; }, (err) => { this.logger.error('Error was occurred', err); })
           .then(() => { intervalExecuteMethod(); });
       }, TRANSACTION_CHECKING_INTERVAL_TIME);
     };
@@ -140,7 +151,7 @@ export class Web3Event implements Web3EventInterface {
     transactions.map(t => t.from).concat(transactions.map(t => t.to)).filter(t => t)
       .forEach(t => {
         txMaps[t] = 1;
-      })
+      });
 
     const walletIds = {};
     (await this.userRep.getAllByWalletAddresses(
@@ -149,7 +160,7 @@ export class Web3Event implements Web3EventInterface {
       .reduce((allWallets, wallets) => allWallets.concat(wallets), [])
       .filter(w => txMaps[w.address])
       .forEach(w => {
-        walletIds[w.address] = (walletIds[w.address] || [])
+        walletIds[w.address] = (walletIds[w.address] || []);
         walletIds[w.address].push(w);
       });
 
@@ -178,19 +189,19 @@ export class Web3Event implements Web3EventInterface {
       });
 
       this.lastCheckingBlock = Math.max(
-        (txWithMaxBlockHeight.length && txWithMaxBlockHeight.pop().blockNumber || 0) - 1,
+        (txWithMaxBlockHeight.length && txWithMaxBlockHeight.pop().blockNumber || 0) - 4,
         config.web3.startBlock
       );
     }
 
     const currentBlock = await this.web3.eth.getBlockNumber();
     if (!this.lastCheckingBlock) {
-      this.lastCheckingBlock = currentBlock;
+      this.lastCheckingBlock = currentBlock - 4;
     }
 
     this.logger.debug('Check blocks from', this.lastCheckingBlock, 'to', currentBlock);
 
-    await processAsyncIntRangeByChunks(this.lastCheckingBlock, currentBlock, 1, CONCURRENT_BLOCK_PROCESS_COUNT, async (i) => {
+    await processAsyncIntRangeByChunks(this.lastCheckingBlock, currentBlock, 1, CONCURRENT_BLOCK_PROCESS_COUNT, async(i) => {
       const blockData: Block = await this.web3.eth.getBlock(i, true);
 
       if (!(i % 10)) {
@@ -208,7 +219,7 @@ export class Web3Event implements Web3EventInterface {
       }
     });
 
-    this.lastCheckingBlock = currentBlock - 1;
+    this.lastCheckingBlock = currentBlock - 10;
     this.logger.debug('Change lastCheckingBlock to', this.lastCheckingBlock);
 
     return true;
@@ -257,7 +268,7 @@ export class Web3Event implements Web3EventInterface {
       return {
         ...t,
         contractAddress
-      }
+      };
     });
 
     const wallets = await this.getWalletMapInTransactions(sourceTransactions);
@@ -342,6 +353,24 @@ export class Web3Event implements Web3EventInterface {
 
     tx.status = getTxStatusByReceipt(transactionReceipt);
 
+    // check erc20 Transfer event
+    if (tx.status !== TRANSACTION_STATUS_FAILED && tx.type === ERC20_TRANSFER) {
+      tx.status = TRANSACTION_STATUS_FAILED;
+      if (!transactionReceipt.logs.length) {
+        this.logger.warn('No events was raised, perhaps insufficient tokens or not allowed withdrawal for', ethTx.hash);
+      } else {
+        transactionReceipt.logs.forEach(log => {
+          const decodedLogs = Web3Abi.decodeLog(this.erc20Abi.Events.Transfer.abi.inputs, log.data, log.topics);
+          if (decodedLogs && decodedLogs._from && decodedLogs._to) {
+            tx.status = TRANSACTION_STATUS_CONFIRMED;
+          }
+        });
+        if (tx.status !== TRANSACTION_STATUS_CONFIRMED) {
+          this.logger.warn('Wrong logs in transaction receipt', ethTx.hash, transactionReceipt.logs);
+        }
+      }
+    }
+
     tx.timestamp = blockData.timestamp;
     tx.blockNumber = blockData.number;
 
@@ -355,12 +384,12 @@ export class Web3Event implements Web3EventInterface {
    */
   onWsClose() {
     this.logger.error(new Date().toUTCString() + ': Web3 socket connection closed. Trying to reconnect');
-    const webSocketProvider = new Web3.providers.WebsocketProvider(config.rpc.address);
+    const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
     webSocketProvider.connection.onclose = () => {
       this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
       setTimeout(() => {
         this.onWsClose();
-      }, config.rpc.reconnectTimeout);
+      }, config.web3.reconnectTimeout);
     };
 
     this.web3.setProvider(webSocketProvider);

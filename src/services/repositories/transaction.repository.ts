@@ -79,7 +79,7 @@ export class TransactionRepository implements TransactionRepositoryInterface {
             $in: types
           }
         }
-      ],
+      ]
     })
     .sort({
       timestamp: -1

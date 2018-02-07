@@ -34,6 +34,10 @@ const {
   AUTH_ACCESS_JWT,
   AUTH_TIMEOUT,
 
+  GLOBAL_CRYPTO_KEY_FILEPATH,
+  RECOVERY_CRYPTO_KEY_FILEPATH,
+  RECOVERY_CRYPTO_FOLDER,
+
   VERIFY_BASE_URL,
   VERIFY_TIMEOUT,
 
@@ -68,8 +72,11 @@ export default {
     httpIp: HTTP_IP || '0.0.0.0'
   },
   web3: {
-    startBlock: WEB3_RESTORE_START_BLOCK || 0,
-    defaultInvestGas: '130000'
+    type: RPC_TYPE,
+    address: RPC_ADDRESS,
+    reconnectTimeout: 2000,
+
+    startBlock: WEB3_RESTORE_START_BLOCK || 0
   },
   redis: {
     url: REDIS_URL || 'redis://redis:6379',
@@ -85,6 +92,11 @@ export default {
   auth: {
     baseUrl: AUTH_VERIFY_URL || 'http://auth:3000',
     token: AUTH_ACCESS_JWT
+  },
+  crypto: {
+    recoveryKey: fs.readFileSync(RECOVERY_CRYPTO_KEY_FILEPATH).toString(),
+    recoveryFolder: RECOVERY_CRYPTO_FOLDER || './recovery',
+    globalKey: fs.readFileSync(GLOBAL_CRYPTO_KEY_FILEPATH).toString()
   },
   verify: {
     baseUrl: VERIFY_BASE_URL || 'http://verify:3000',
@@ -121,10 +133,5 @@ export default {
     subscribers: [
       ORM_SUBSCRIBER_DIR
     ]
-  },
-  rpc: {
-    type: RPC_TYPE,
-    address: RPC_ADDRESS,
-    reconnectTimeout: 2000 // in milliseconds
   }
 };

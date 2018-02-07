@@ -33,12 +33,12 @@ export class Web3Client implements Web3ClientInterface {
    *
    */
   constructor() {
-    switch (config.rpc.type) {
+    switch (config.web3.type) {
       case 'ipc':
-        this.web3 = new Web3(new Web3.providers.IpcProvider(config.rpc.address, net));
+        this.web3 = new Web3(new Web3.providers.IpcProvider(config.web3.address, net));
         break;
       case 'ws':
-        const webSocketProvider = new Web3.providers.WebsocketProvider(config.rpc.address);
+        const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
 
         webSocketProvider.connection.onclose = () => {
           this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
@@ -48,7 +48,7 @@ export class Web3Client implements Web3ClientInterface {
         this.web3 = new Web3(webSocketProvider);
         break;
       case 'http':
-        this.web3 = new Web3(config.rpc.address);
+        this.web3 = new Web3(config.web3.address);
         break;
       default:
         throw Error('Unknown Web3 RPC type!');
@@ -161,12 +161,12 @@ export class Web3Client implements Web3ClientInterface {
    */
   onWsClose() {
     this.logger.error(new Date().toUTCString() + ': Web3 socket connection closed. Trying to reconnect');
-    const webSocketProvider = new Web3.providers.WebsocketProvider(config.rpc.address);
+    const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
     webSocketProvider.connection.onclose = () => {
       this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
       setTimeout(() => {
         this.onWsClose();
-      }, config.rpc.reconnectTimeout);
+      }, config.web3.reconnectTimeout);
     };
 
     this.web3.setProvider(webSocketProvider);

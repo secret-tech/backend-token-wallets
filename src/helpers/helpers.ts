@@ -21,6 +21,14 @@ export function base64decode(str) {
   return Buffer.from(unescape(str), 'base64').toString('utf8');
 }
 
+export function intersect<T>(a: T[], b: T[]): T[] {
+  return a.filter(ai => b.indexOf(ai) > -1);
+}
+
+export function difference<T>(a: T[], b: T[]): T[] {
+  return a.filter(ai => b.indexOf(ai) < 0);
+}
+
 /**
  *
  * @param srcArray
@@ -49,9 +57,9 @@ export async function processAsyncIntRangeByChunks<R>(
   let numbers: number[];
   let j: number;
 
-  while(from <= to) {
+  while (from <= to) {
     numbers = [];
-    for(j = 0; j < chunkSize && from <= to; ++j, from += step) {
+    for (j = 0; j < chunkSize && from <= to; ++j, from += step) {
       numbers.push(from);
     }
     data = data.concat(await Promise.all(numbers.map(mapFunc)));
