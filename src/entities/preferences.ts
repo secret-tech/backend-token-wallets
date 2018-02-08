@@ -21,7 +21,7 @@ export type BooleanState = { [k: string]: boolean; };
 // set true for unknown keys
 function setState(allowedKeys: string[], passedState: BooleanState): BooleanState {
   return allowedKeys.reduce((state, name) => {
-    state[name] = passedState[name] === undefined || passedState[name];
+    state[name] = passedState[name] === undefined || !!passedState[name];
     return state;
   }, {});
 }

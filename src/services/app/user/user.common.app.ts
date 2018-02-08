@@ -32,6 +32,7 @@ export class UserCommonApplication {
    * @param user
    */
   async getUserInfo(user: User): Promise<any> {
+    // @TODO: Refactor
     const preferences = user.preferences || {};
     if (!Object.keys(preferences['notifications'] || {}).length) {
       preferences['notifications'] = getAllNotifications().reduce((p, c) => (p[c] = true, p), {});

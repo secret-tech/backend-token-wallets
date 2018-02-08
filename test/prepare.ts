@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 const prepare = require('mocha-prepare');
 import { createConnection } from 'typeorm';
 

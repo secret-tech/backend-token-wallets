@@ -21,7 +21,7 @@ import { VerificationInitiateContext } from '../external/verify.context.service'
 import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../verify.cases';
 import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../external/verify.action.service';
 import { EncodedTransaction } from 'web3/types';
-import { toEthChecksumAddress, MasterKeySecret, decryptTextByRecoveryMasterKey, decryptTextByUserMasterKey } from '../crypto';
+import { toEthChecksumAddress, MasterKeySecret, decryptTextByUserMasterKey } from '../crypto';
 
 export interface TransactionSendData {
   to: string;
@@ -140,15 +140,14 @@ export class TransactionApplication {
     const msc = new MasterKeySecret();
 
     const mnemonic = decryptTextByUserMasterKey(msc, user.wallets[0].mnemonic, paymantPassword, user.wallets[0].securityKey);
-    const salt = decryptTextByUserMasterKey(msc, user.wallets[0].salt, paymantPassword, user.wallets[0].securityKey);
-
-    if (!mnemonic.match(/^[\w ]+$/)) {
+    if (!mnemonic) {
       throw new IncorrectMnemonic('Incorrect payment password');
     }
 
+    const salt = decryptTextByUserMasterKey(msc, user.wallets[0].salt, paymantPassword, user.wallets[0].securityKey);
     const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
     if (account.address !== user.wallets[0].address) {
-      throw new IncorrectMnemonic('Incorrect payment password');
+      throw new IncorrectMnemonic('Incorrect payment password, invalid address');
     }
 
     if (transData.type === ERC20_TRANSFER && !transData.contractAddress) {

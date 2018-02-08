@@ -22,7 +22,7 @@ import {
 import { User } from '../../../entities/user';
 import { VerifiedToken } from '../../../entities/verified.token';
 import * as transformers from '../transformers';
-import { generateMnemonic, MasterKeySecret, getSha256HexHash, getUserMasterKey, encryptText, getRecoveryMasterKey, decryptTextByRecoveryMasterKey } from '../../crypto';
+import { generateMnemonic, MasterKeySecret, getUserMasterKey, encryptText, getRecoveryMasterKey, getSha256Hash } from '../../crypto';
 import { Logger } from '../../../logger';
 import { UserRepositoryType, UserRepositoryInterface } from '../../repositories/user.repository';
 import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface, RegisteredTokenScope } from '../../repositories/registered.tokens.repository';
@@ -81,13 +81,18 @@ export class UserAccountApplication {
     // should be created every time for fresh master key
     const msc = new MasterKeySecret();
 
+    const recoveryKey = getRecoveryMasterKey(msc);
+
     user.addWallet(Wallet.createWallet({
       ticker: 'ETH',
       address: account.address,
       balance: '0',
       tokens: [],
-      // hacky way
-      securityKey: JSON.stringify([getUserMasterKey(msc, paymentPassword), getRecoveryMasterKey(msc)]),
+      securityKey: JSON.stringify([getUserMasterKey(msc, paymentPassword), {
+        mac: recoveryKey.mac.toString('base64'),
+        pubkey: recoveryKey.pubkey.toString('base64'),
+        msg: recoveryKey.msg.toString('base64')
+      }]),
       salt: encryptText(msc, salt),
       mnemonic: encryptText(msc, mnemonic)
     }));
@@ -153,6 +158,21 @@ export class UserAccountApplication {
     }));
   }
 
+  private getRecoveryNameForUser(user: User): string {
+    return getSha256Hash(new Buffer(user.email + user.wallets[0].address.toLowerCase(), 'utf-8')).toString('hex');
+  }
+
+  private async saveRecoveryKey(recoveryKey: string, user: User) {
+    // @TODO: Save in more safe space
+    writeFile(
+      join(
+        config.crypto.recoveryFolder,
+        this.getRecoveryNameForUser(user)
+      ),
+      JSON.stringify(recoveryKey)
+    );
+  }
+
   private async activateUserAndGetNewWallets(user: User): Promise<NewWallet[]> {
     this.logger.debug('Save user state', user.email);
 
@@ -164,24 +184,19 @@ export class UserAccountApplication {
 
     this.logger.debug('Save recovery key for', user.email);
 
-    // @TODO: Save in more secure space
-    writeFile(join(config.crypto.recoveryFolder, getSha256HexHash(user.email)), recoveryKey);
+    this.saveRecoveryKey(recoveryKey, user);
 
     this.logger.debug('Prepare response wallets for', user.email);
 
     const msc = new MasterKeySecret();
-    const mnemonic = decryptTextByRecoveryMasterKey(msc, user.wallets[0].mnemonic, recoveryKey);
-    const salt = decryptTextByRecoveryMasterKey(msc, user.wallets[0].salt, recoveryKey);
-
-    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
 
     return [{
       ticker: 'ETH',
-      address: account.address,
+      address: user.wallets[0].address,
       tokens: [],
       balance: '0',
-      mnemonic,
-      privateKey: account.privateKey
+      mnemonic: '',  // now it's empty
+      privateKey: '' // now it's empty
     }];
   }
 
