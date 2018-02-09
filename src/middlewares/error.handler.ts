@@ -34,6 +34,8 @@ export default function defaultExceptionHandle(err: Error, req: Request, res: Re
     case Err.UserNotFound:
       status = 404;
       break;
+    case Err.InvalidTokenDecimals:
+      status = 422;
     default:
       status = 500;
   }

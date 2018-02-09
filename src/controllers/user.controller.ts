@@ -123,7 +123,7 @@ export class UserController {
         contractAddress: ethereumAddressValidator.required(),
         symbol: Joi.string().required(),
         name: Joi.string().optional(),
-        decimals: Joi.number().required().min(0).max(28)
+        decimals: Joi.number().valid(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30).required()
       }), req.body, res, next);
     }
   )

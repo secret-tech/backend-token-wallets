@@ -10,6 +10,7 @@ import { processAsyncItemsByChunks, CacheMethodResult } from '../../helpers/help
 import { RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface } from '../repositories/registered.tokens.repository';
 import { RegisteredToken } from '../../entities/registered.token';
 import { toEthChecksumAddress } from '../crypto';
+import { fromWeiToUnitValue } from '../tokens/helpers';
 
 const CONCURRENT_GET_TOKEN_BALANCEOF: number = 2;
 
@@ -43,7 +44,9 @@ export class DashboardApplication {
 
         processAsyncItemsByChunks(wallet.tokens, CONCURRENT_GET_TOKEN_BALANCEOF, (token) => {
           return new Erc20TokenService(this.web3Client, token.contractAddress)
-            .getBalanceOf(wallet.address).then(balance => { return { ...token, balance }; });
+            .getBalanceOf(wallet.address).then(balance => {
+              return { ...token, balance: fromWeiToUnitValue(balance, token && token.decimals || 0) };
+            });
         })
       ]);
     });

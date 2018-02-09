@@ -22,6 +22,8 @@ import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationIn
 import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../external/verify.action.service';
 import { EncodedTransaction } from 'web3/types';
 import { toEthChecksumAddress, MasterKeySecret, decryptTextByUserMasterKey } from '../crypto';
+import { fromUnitValueToWei, fromWeiToUnitValue } from '../tokens/helpers';
+import { Token } from '../../entities/token';
 
 export interface TransactionSendData {
   to: string;
@@ -84,7 +86,7 @@ export class TransactionApplication {
    *
    * @param user
    */
-  private getKnownUserErc20Tokens(user: User) {
+  private getKnownUserErc20Tokens(user: User): { [k: string]: Token; } {
     const knownUserTokens = {};
 
     user.wallets[0].tokens.forEach(t => {
@@ -115,6 +117,9 @@ export class TransactionApplication {
           const contractAddress = tx.contractAddress ? toEthChecksumAddress(tx.contractAddress) : '';
           return {
             ...tx, token: knownUserTokens[contractAddress],
+            amount: tx.type === ERC20_TRANSFER && knownUserTokens[contractAddress] ?
+              fromWeiToUnitValue(tx.amount, knownUserTokens[contractAddress].decimals || 0) :
+              tx.amount,
             details: undefined,
             // remove contract address if token is known
             contractAddress: tx.type === ERC20_TRANSFER && !knownUserTokens[contractAddress] ?
@@ -154,12 +159,18 @@ export class TransactionApplication {
       throw new NotCorrectTransactionRequest('Empty token address');
     }
 
+    let amount = '' + transData.amount;
+    if (transData.type === ERC20_TRANSFER) {
+      const token = user.wallets[0].getTokenByContractAddress(transData.contractAddress);
+      amount = fromUnitValueToWei(amount, token && token.decimals || 0);
+    }
+
     const gas = '' + Math.max(+transData.gas, 30000);
     const gasPrice = '' + (Math.max(+transData.gasPrice, 0) || await this.web3Client.getCurrentGasPrice());
     const txInput = {
       from: user.wallets[0].address,
       to: transData.to,
-      amount: '' + transData.amount,
+      amount: '' + amount,
       gas,
       gasPrice
     };
