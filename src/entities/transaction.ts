@@ -10,14 +10,17 @@ export const ETHEREUM_TRANSFER = 'eth_transfer';
 export const ERC20_TRANSFER = 'erc20_transfer';
 
 @Entity()
-@Index('txs_hash_type_from_to', () => ({
-  transactionHash: 1,
-  type: 1,
-  from: 1,
+@Index('txs_from', () => ({
+  from: 1
+}))
+@Index('txs_to', () => ({
   to: 1
 }))
-@Index('txs_block_height', () => ({
-  blockNumber: -1
+@Index('txs_hash', () => ({
+  transactionHash: 1
+}))
+@Index('txs_timestamp', () => ({
+  timestamp: -1
 }))
 export class Transaction {
   @ObjectIdColumn()

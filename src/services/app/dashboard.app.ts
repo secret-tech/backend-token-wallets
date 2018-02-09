@@ -11,6 +11,7 @@ import { RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface } fro
 import { RegisteredToken } from '../../entities/registered.token';
 import { toEthChecksumAddress } from '../crypto';
 import { fromWeiToUnitValue } from '../tokens/helpers';
+import { WalletNotFound } from '../../exceptions';
 
 const CONCURRENT_GET_TOKEN_BALANCEOF: number = 2;
 
@@ -33,12 +34,15 @@ export class DashboardApplication {
    * Get balances for addr
    * @param user
    */
-  async balancesFor(user: User): Promise<any> {
-    this.logger.debug('Get balances for', user.email);
+  async balancesFor(user: User, walletAddress: string): Promise<any> {
+    this.logger.debug('Get balances for', user.email, walletAddress);
 
-    const wallet = user.wallets[0];
+    const wallet = user.getWalletByAddress(walletAddress);
+    if (!wallet) {
+      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+    }
 
-    const [ethBalance, erc20TokensBalance] = await dashboardCache.run('ubalances' + user.email, () => {
+    const [ethBalance, erc20TokensBalance] = await dashboardCache.run('ubalances' + user.id.toString() + walletAddress, () => {
       return Promise.all([
         this.web3Client.getEthBalance(wallet.address),
 

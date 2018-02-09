@@ -17,12 +17,13 @@ import {
   UserNotFound,
   InvalidPassword,
   TokenNotFound,
-  AuthenticatorError
+  AuthenticatorError,
+  IncorrectMnemonic
 } from '../../../exceptions';
 import { User } from '../../../entities/user';
 import { VerifiedToken } from '../../../entities/verified.token';
 import * as transformers from '../transformers';
-import { generateMnemonic, MasterKeySecret, getUserMasterKey, encryptText, getRecoveryMasterKey, getSha256Hash } from '../../crypto';
+import { generateMnemonic, MasterKeySecret, getUserMasterKey, encryptText, getRecoveryMasterKey, getSha256Hash, decryptTextByUserMasterKey } from '../../crypto';
 import { Logger } from '../../../logger';
 import { UserRepositoryType, UserRepositoryInterface } from '../../repositories/user.repository';
 import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface, RegisteredTokenScope } from '../../repositories/registered.tokens.repository';
@@ -74,28 +75,52 @@ export class UserAccountApplication {
   private createNewWallet(user: User, paymentPassword: string) {
     this.logger.debug('Create new wallet for', user.email);
 
-    const mnemonic = generateMnemonic();
-    const salt = bcrypt.genSaltSync();
-    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
-
     // should be created every time for fresh master key
     const msc = new MasterKeySecret();
 
-    const recoveryKey = getRecoveryMasterKey(msc);
+    let mnemonic = generateMnemonic();
+    let salt = bcrypt.genSaltSync();
 
-    user.addWallet(Wallet.createWallet({
-      ticker: 'ETH',
-      address: account.address,
-      balance: '0',
-      tokens: [],
-      securityKey: JSON.stringify([getUserMasterKey(msc, paymentPassword), {
+    if (user.securityKey && user.wallets.length) {
+      this.logger.debug('Derive new wallet for', user.email);
+
+      mnemonic = decryptTextByUserMasterKey(msc, user.mnemonic, paymentPassword, user.securityKey);
+      if (!mnemonic) {
+        throw new IncorrectMnemonic('Incorrect payment password');
+      }
+
+      salt = decryptTextByUserMasterKey(msc, user.salt, paymentPassword, user.securityKey);
+      if (!salt) {
+        throw new IncorrectMnemonic('Incorrect payment password, invalid address');
+      }
+    } else {
+      this.logger.debug('First creation of wallet for', user.email);
+
+      const recoveryKey = getRecoveryMasterKey(msc);
+
+      user.securityKey = JSON.stringify([getUserMasterKey(msc, paymentPassword), {
         mac: recoveryKey.mac.toString('base64'),
         pubkey: recoveryKey.pubkey.toString('base64'),
         msg: recoveryKey.msg.toString('base64')
-      }]),
-      salt: encryptText(msc, salt),
-      mnemonic: encryptText(msc, mnemonic)
-    }));
+      }]);
+      user.salt = encryptText(msc, salt);
+      user.mnemonic = encryptText(msc, mnemonic);
+    }
+
+    const walletIndex = user.getNextWalletIndex();
+    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt, walletIndex);
+
+    const newWallet = Wallet.createWallet({
+      ticker: 'ETH',
+      address: account.address,
+      balance: '0',
+      tokens: []
+    });
+    newWallet.index = walletIndex;
+
+    user.addWallet(newWallet);
+
+    return newWallet;
   }
 
   /**
@@ -148,12 +173,12 @@ export class UserAccountApplication {
     return this.initiateCreateAndReturnUser(user, initiateVerification);
   }
 
-  private async addGlobalRegisteredTokens(user: User) {
-    this.logger.debug('Fill known global tokens and set verified for', user.email);
+  private async addGlobalRegisteredTokens(user: User, wallet: Wallet) {
+    this.logger.debug('Fill known global tokens and set verified for', user.email, wallet.address);
 
     const registeredTokens = await this.tokensRepository.getAllByScope(RegisteredTokenScope.Global);
 
-    user.wallets[0].tokens = registeredTokens.map(rt => Token.createToken({
+    wallet.tokens = registeredTokens.map(rt => Token.createToken({
       contractAddress: rt.contractAddress,
       symbol: rt.symbol,
       name: rt.name,
@@ -162,7 +187,7 @@ export class UserAccountApplication {
   }
 
   private getRecoveryNameForUser(user: User): string {
-    return getSha256Hash(new Buffer(user.email + user.wallets[0].address.toLowerCase(), 'utf-8')).toString('hex');
+    return `${user.id.toHexString()}_${getSha256Hash(new Buffer(user.email, 'utf-8')).toString('hex').slice(0, 24)}`;
   }
 
   private async saveRecoveryKey(recoveryKey: string, user: User) {
@@ -176,18 +201,20 @@ export class UserAccountApplication {
     );
   }
 
-  private async activateUserAndGetNewWallets(user: User): Promise<NewWallet[]> {
-    this.logger.debug('Save user state', user.email);
+  private async activateUserAndGetNewWallets(user: User): Promise<any[]> {
+    this.logger.debug('Prepare seckey', user.email);
 
-    const [userKey, recoveryKey] = JSON.parse(user.wallets[0].securityKey);
-    user.wallets[0].securityKey = userKey;
+    const [userKey, recoveryKey] = JSON.parse(user.securityKey);
+    user.securityKey = userKey;
     user.isVerified = true;
-
-    await this.userRepository.save(user);
 
     this.logger.debug('Save recovery key for', user.email);
 
     this.saveRecoveryKey(recoveryKey, user);
+
+    this.logger.debug('Save user state', user.email);
+
+    await this.userRepository.save(user);
 
     this.logger.debug('Prepare response wallets for', user.email);
 
@@ -197,9 +224,7 @@ export class UserAccountApplication {
       ticker: 'ETH',
       address: user.wallets[0].address,
       tokens: [],
-      balance: '0',
-      mnemonic: '',  // now it's empty
-      privateKey: '' // now it's empty
+      balance: '0'
     }];
   }
 
@@ -235,7 +260,7 @@ export class UserAccountApplication {
       deviceId: 'device'
     });
 
-    await this.addGlobalRegisteredTokens(user);
+    await this.addGlobalRegisteredTokens(user, user.wallets[0]);
     const newWallets = await this.activateUserAndGetNewWallets(user);
 
     this.logger.debug('Save verified token for activated user', user.email);
@@ -498,7 +523,9 @@ export class UserAccountApplication {
       verifications
     });
 
-    return verifyInitiated;
+    return {
+        verification: verifyInitiated
+    };
   }
 
   /**
@@ -521,6 +548,22 @@ export class UserAccountApplication {
     return {
       verifications: user.preferences.verifications
     };
+  }
+
+  async createAndAddNewWallet(user: User, type: string, paymentPassword: string): Promise<any> {
+    this.logger.debug('Create and add new wallet', user.email, type);
+
+    const newWallet = await this.createNewWallet(user, paymentPassword);
+
+    this.logger.debug('Save new wallet for user', user.email);
+
+    await this.userRepository.save(user);
+
+    return {
+      ticker: 'ETH',
+      address: newWallet.address,
+      balance: '0'
+    }
   }
 }
 

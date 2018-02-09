@@ -24,12 +24,12 @@ export function generateMnemonic(): string {
  * @param mnemonic
  * @param salt
  */
-export function getPrivateKeyByMnemonicAndSalt(mnemonic: string, salt: string) {
+export function getPrivateKeyByMnemonicAndSalt(mnemonic: string, salt: string, walletIndex: number = 0) {
   // get seed
   const hdWallet = hdkey.fromMasterSeed(bip39.mnemonicToSeed(mnemonic, salt));
 
   // get first of available wallets
-  const path = 'm/44\'/60\'/0\'/0/0';
+  const path = 'm/44\'/60\'/0\'/0/' + Math.max(~~walletIndex, 0);
 
   // get wallet
   const wallet = hdWallet.derivePath(path).getWallet();

@@ -130,7 +130,7 @@ export class UserController {
     }
   )
   async registerErc20Token(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userCommonApp.registerToken(req.app.locals.user, req.body));
+    res.json(await this.userCommonApp.registerToken(req.app.locals.user, req.body.walletAddress, req.body));
   }
 
   /**
@@ -322,5 +322,24 @@ export class UserController {
   )
   async setVerificationVerify(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
     res.json(await this.userAccountApp.verifySetVerifications(req.app.locals.user, req.body));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPost(
+    '/me/wallets',
+    'AuthMiddleware',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        type: Joi.string().valid('ETH').required(),
+        paymentPassword: Joi.string().required().regex(passwordRegex)
+      }), req.body, res, next);
+    }
+  )
+  async createNewWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
+    res.json(await this.userAccountApp.createAndAddNewWallet(req.app.locals.user, req.body.type, req.body.paymentPassword));
   }
 }

@@ -31,6 +31,8 @@ export default function defaultExceptionHandle(err: Error, req: Request, res: Re
       break;
     case Err.VerificationIsNotFound:
       // no break
+    case Err.WalletNotFound:
+      // no break
     case Err.UserNotFound:
       status = 404;
       break;

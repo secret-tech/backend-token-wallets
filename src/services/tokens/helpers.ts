@@ -35,7 +35,7 @@ const dictOfdecimalsToUnit = Object.keys(w3u.unitMap)
  */
 export function fromWeiToUnitValue(valueInWei: string, decimals: number): string {
   if (!dictOfdecimalsToUnit[decimals]) {
-    throw new InvalidTokenDecimals('' + decimals);
+    throw new InvalidTokenDecimals('Invalid token decimals: ' + decimals);
   }
   return w3u.fromWei(valueInWei, dictOfdecimalsToUnit[decimals]);
 }
@@ -47,7 +47,7 @@ export function fromWeiToUnitValue(valueInWei: string, decimals: number): string
  */
 export function fromUnitValueToWei(valueInUnit: string, decimals: number): string {
   if (!dictOfdecimalsToUnit[decimals]) {
-    throw new InvalidTokenDecimals('' + decimals);
+    throw new InvalidTokenDecimals('Invalid token decimals: ' + decimals);
   }
   return w3u.toWei(valueInUnit, dictOfdecimalsToUnit[decimals]);
 }
