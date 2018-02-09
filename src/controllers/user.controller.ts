@@ -121,6 +121,7 @@ export class UserController {
     'AuthMiddleware',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
+        walletAddress: ethereumAddressValidator.required(),
         contractAddress: ethereumAddressValidator.required(),
         symbol: Joi.string().required(),
         name: Joi.string().optional(),

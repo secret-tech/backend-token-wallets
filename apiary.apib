@@ -15,12 +15,13 @@ User's email must be verified after registration. Next step after calling this e
 
 ### Register new user [POST]
 
-+ email `test@test.com` (required, string, email)
-+ password `passwordA6` (required, string, min: 6, regex: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$)
-+ name `John Smith` (required, string, min: 3)
-+ agreeTos `true` (required, boolean, only true allowed)
-
 + Request (application/json)
+    + Attributes
+        + email: `test@test.com` (required, string)
+        + password: `passwordA6` (required, string) - min: 6, regex: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$
+        + paymentPassword: `passwordA6` (required, string) - min: 6, regex: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$
+        + name: `John Smith` (required, string) - min: 3
+        + agreeTos: `true` (required, boolean) - only `true` allowed
 
     + Headers
 
@@ -43,13 +44,13 @@ User's email must be verified after registration. Next step after calling this e
 + Response 200 (application/json)
 
         {
-            "email": "ortga@gmail.com",
-            "name": "John Smith",
-            "agreeTos": true,
             "verification": {
                 "id": "3ed09e0a-72e1-417b-a05c-f0f08a5e1ffa",
                 "method": "email"
             },
+            "email": "ortga@gmail.com",
+            "name": "John Smith",
+            "agreeTos": true,
             "isVerified": false,
             "defaultVerificationMethod": "email",
             "source": {
@@ -75,11 +76,11 @@ access to his wallet of ICO dashboard.
 
 ### Activate a user [POST]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 + Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -103,9 +104,7 @@ access to his wallet of ICO dashboard.
                     "ticker": "ETH",
                     "address": "0x7EB6Bea6eCf5aF3eA9c7e9dcb4D71966CFA4c9Eb",
                     "tokens": [],
-                    "balance": "0",
-                    "mnemonic": "",
-                    "privateKey": ""
+                    "balance": "0"
                 }
             ]
         }
@@ -117,10 +116,10 @@ Authentication attempts with not verified token will result in 401 response.
 
 ### Initiate login [POST]
 
-+ email `test@test.com` (required, string, email)
-+ password `passwordA6` (required, string)
-
 + Request (application/json)
+    + Attributes
+        + email: `test@test.com` (required, string)
+        + password: `passwordA6` (required, string)
 
     + Headers
 
@@ -146,13 +145,13 @@ Authentication attempts with not verified token will result in 401 response.
 
 ## Verify login [/user/login/verify]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify login [POST]
 
 + Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -178,10 +177,10 @@ Authentication attempts with not verified token will result in 401 response.
 
 ### Initiate password change [POST]
 
-+ oldPassword `passwordA1` (required, string)
-+ newPassword `passwordA6` (required, string, regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/)
-
 + Request (application/json)
+    + Attributes
+        + oldPassword: `passwordA1` (required, string)
+        + newPassword: `passwordA6` (required, string) - regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/
 
     + Headers
 
@@ -206,13 +205,13 @@ Authentication attempts with not verified token will result in 401 response.
 
 ## Verify password change [/user/me/changePassword/verify]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify password change [POST]
 
 + Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -238,9 +237,9 @@ Authentication attempts with not verified token will result in 401 response.
 
 ### Initiate password reset [POST]
 
-+ email `test@test.com` (string, required, email)
-
 + Request (application/json)
+    + Attributes
+        + email: `test@test.com` (string, required)
 
     + Headers
 
@@ -263,14 +262,14 @@ Authentication attempts with not verified token will result in 401 response.
 
 ## Verify password reset [/user/resetPassword/verify]
 
-+ email (required, email, string)
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify password reset [POST]
 
 + Request (application/json)
+    + Attributes
+        + email: `test@test.com` (required, string)
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -295,13 +294,13 @@ Authentication attempts with not verified token will result in 401 response.
 
 ## Enter new password to reset [/user/resetPassword/enter]
 
-+ email (required, email, string)
-+ password (required, string, regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/)
-+ resetId (required, string) unique code from the reset password verify step
-
 ### Enter new password to reset [POST]
 
 + Request (application/json)
+    + Attributes
+        + email (required, string)
+        + password (required, string) - regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/
+        + resetId (required, string) - unique code from the reset password verify step
 
     + Headers
 
@@ -332,9 +331,9 @@ Authentication attempts with not verified token will result in 401 response.
 
 ### Set notifications state [POST]
 
-+ notifications (required, object of booleans). Allowed keys: user_signin, user_change_password, user_reset_password.
-
 + Request (application/json)
+    + Attributes
+        + notifications (required, object) - Allowed keys: user_signin, user_change_password, user_reset_password.
 
     + Headers
 
@@ -369,9 +368,9 @@ For inline method you should pass any code (random) for verify action.
 
 ### Initiate set verifications state [POST]
 
-+ verifications (required, object of booleans). Allowed keys: user_signin, user_change_password, transaction_send.
-
 + Request (application/json)
+    + Attributes
+        + verifications (required, object) - Allowed keys: user_signin, user_change_password, transaction_send.
 
     + Headers
 
@@ -399,13 +398,13 @@ For inline method you should pass any code (random) for verify action.
 
 ## Verify set verifications state [/user/preferences/disableVerifications/verify]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify set verifications state [POST]
 
 + Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -433,13 +432,14 @@ For inline method you should pass any code (random) for verify action.
 
 ## Initiate enable 2FA [/user/enable2fa/initiate]
 
+### Initiate enable 2fa [GET]
+
 + Request
+
     + Headers
 
             Authorization: Bearer token
             Accept: application/json
-
-### Initiate enable 2fa [GET]
 
 + Response 200 (application/json)
 
@@ -454,13 +454,13 @@ For inline method you should pass any code (random) for verify action.
 
 ## Verify enable 2fa [/user/enable2fa/verify]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify enable 2fa [POST]
 
 + Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -484,14 +484,14 @@ For inline method you should pass any code (random) for verify action.
 
 ## Initiate disable 2FA [/user/disable2fa/initiate]
 
+### Initiate disable 2fa [GET]
+
 + Request
 
     + Headers
 
             Authorization: Bearer token
             Accept: application/json
-
-### Initiate disable 2fa [GET]
 
 + Response 200 (application/json)
 
@@ -504,13 +504,13 @@ For inline method you should pass any code (random) for verify action.
 
 ## Verify disable 2fa [/user/disable2fa/verify]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify disable 2fa [POST]
 
 + Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
 
     + Headers
 
@@ -534,16 +534,45 @@ For inline method you should pass any code (random) for verify action.
             "enabled": false
         }
 
+## Create new wallet [/user/wallets]
+
+### Create new wallet [POST]
+
++ Request (application/json)
+    + Attributes
+        + type: `ETH` (required, string) - Only ETH allowed.
+        + paymentPassword: `passwordA6` (required, string) - min: 6, regex: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {
+                "type": "ETH",
+                "paymentPassword": "payment12A6!@#$%^&*()_-=+|/"
+            }
+
++ Response 200 (application/json)
+
+            {
+                "ticker": "ETH",
+                "address": "0xdb369b56BA7b07cF287f611Fbf0DAA4A8a4C2751",
+                "tokens": []
+            }
+
 ## Register ERC20 token [/user/me/erc20token/register]
 
 ### Register ERC20 token [POST]
 
-+ contractAddress (required, string)
-+ name (optional, string)
-+ symbol (required, string)
-+ decimals (required, number)
-
 + Request (application/json)
+    + Attributes
+        + walletAddress (required, string)
+        + contractAddress (required, string)
+        + name (optional, string)
+        + symbol (required, string)
+        + decimals (required, number)
 
     + Headers
 
@@ -553,6 +582,7 @@ For inline method you should pass any code (random) for verify action.
     + Body
 
             {
+                "walletAddress": "0x7EB6Bea6eCf5aF3eA9c7e9dcb4D71966CFA4c9Eb",
                 "contractAddress": "0xc20f363f721fe8b35cc2aafd18df7156c775d642",
                 "name": "My Token",
                 "symbol": "SAV",
@@ -564,6 +594,7 @@ For inline method you should pass any code (random) for verify action.
 + Response 200 (application/json)
 
         {
+            "walletAddress": "0x7EB6Bea6eCf5aF3eA9c7e9dcb4D71966CFA4c9Eb",
             "contractAddress": "0xc20f363f721fe8b35cc2aafd18df7156c775d642",
             "name": "My Token",
             "symbol": "SAV",
@@ -584,24 +615,29 @@ For inline method you should pass any code (random) for verify action.
 + Response 200 (application/json)
 
         {
-            "ethAddress": "0xdb369b56BA7b07cF287f611Fbf0DAA4A8a4C2751",
-            "tokens": [
+            "wallets": [
                 {
-                    "contractAddress": "0xc31382ef54b77be67605980197b76a40417b5a74",
-                    "name": "My Token",
-                    "symbol": "SAV",
-                    "decimals": 18
+                    "ticker": "ETH",
+                    "address": "0xdb369b56BA7b07cF287f611Fbf0DAA4A8a4C2751"
+                    "tokens": [
+                        {
+                            "contractAddress": "0xc31382ef54b77be67605980197b76a40417b5a74",
+                            "name": "My Token",
+                            "symbol": "SAV",
+                            "decimals": 18
+                        }
+                    ]
                 }
             ],
             "preferences": {
                 "notifications": {
                     "user_signin": false,
-                    "user_change_password": false
+                    "user_change_password": false,
                     "user_reset_password": true
                 },
                 "verifications": {
                     "user_signin": false,
-                    "user_change_password": false
+                    "user_change_password": false,
                     "transaction_send": true
                 }
             },
@@ -612,9 +648,13 @@ For inline method you should pass any code (random) for verify action.
 
 # Group Dashboard
 
-## Get dashboard info [/dashboard]
+## Get dashboard info [/dashboard{?walletAddress}]
 
 ### Get dashboard info [GET]
+
++ Parameters
+
+    + walletAddress (required, string) - Wallet address.
 
 + Request
 
@@ -694,9 +734,13 @@ For inline method you should pass any code (random) for verify action.
             "status": 404
         }
 
-## Get transaction history [/dashboard/transactions]
+## Get transaction history [/dashboard/transactions{?walletAddress}]
 
 ### Get transaction history [GET]
+
++ Parameters
+
+    + walletAddress (required, string) - Wallet address
 
 + Request
 
@@ -778,15 +822,16 @@ For inline method you should pass any code (random) for verify action.
 
 ## Initiate transaction [/dashboard/transaction/initiate]
 
-+ amount `1` (required, number, min(1e-10))
-+ paymentPassword `payment12A6` (required, string)
-+ type `eth_transfer` (required, string in (`eth_transfer`, `erc20_transfer`))
-+ to (required, string) Destination wallet address
-+ gas (optional, string) Customization of gas limit
-+ gasPrice (optional, string) Customization of gas price
-
 ### Initiate transaction [POST]
 
++ Attributes
+    + amount: `1` (required, number)
+    + paymentPassword: `payment12A6` (required, string)
+    + type: `eth_transfer` (required, string) - One of `eth_transfer`, `erc20_transfer`.
+    + from (required, string) - Source wallet address
+    + to (required, string) - Destination wallet address
+    + gas (optional, string) - Customization of gas limit
+    + gasPrice (optional, string) - Customization of gas price
 
 + Request
     + Headers
@@ -800,6 +845,7 @@ For inline method you should pass any code (random) for verify action.
                 "amount": 1000,
                 "paymentPassword": "payment12A6"
                 "type": "erc20_transfer",
+                "from": "0x446cd17EE68bD5A567d43b696543615a94b01760",
                 "contractAddress": "0xc20f363f721fe8b35cc2aafd18df7156c775d642",
                 "to": "0x81c51b9c45D38f3AAB102a430D8aDFFF0523dCFe"
             }
@@ -815,13 +861,15 @@ For inline method you should pass any code (random) for verify action.
 
 ## Verify transaction [/dashboard/transaction/verify]
 
-+ verification
-    + verificationId `UUID` (required, string)
-    + code `000000` (required, string)
-
 ### Verify transaction [POST]
 
 + Request (application/json)
+
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
+
 
     + Headers
 
