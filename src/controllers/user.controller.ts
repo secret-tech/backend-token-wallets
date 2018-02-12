@@ -142,7 +142,7 @@ export class UserController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         oldPassword: Joi.string().required(),
-        newPassword: Joi.string().required().regex(passwordRegex)
+        newPassword: Joi.string().regex(passwordRegex).disallow(Joi.ref('oldPassword')).required()
       }), req.body, res, next);
     }
   )
