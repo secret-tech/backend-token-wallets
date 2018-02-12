@@ -155,11 +155,15 @@ export class TransactionApplication {
       throw new IncorrectMnemonic('Incorrect payment password, invalid address');
     }
 
+    if (transData.to.toLowerCase() === account.address.toLowerCase()) {
+      throw new NotCorrectTransactionRequest('Senseless operation, to send to yourself');
+    }
+
     if (transData.type === ERC20_TRANSFER && !transData.contractAddress) {
       throw new NotCorrectTransactionRequest('Empty token address');
     }
 
-    let amount = '' + transData.amount;
+    let amount = ('' + transData.amount).replace(/0+$/, ''); // remove last zeroes
     if (transData.type === ERC20_TRANSFER) {
       const token = user.wallets[0].getTokenByContractAddress(transData.contractAddress);
       amount = fromUnitValueToWei(amount, token && token.decimals || 0);

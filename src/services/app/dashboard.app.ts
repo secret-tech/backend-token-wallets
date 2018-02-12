@@ -62,6 +62,8 @@ export class DashboardApplication {
    * @param contractAddress
    */
   getErc20TokenInfo(contractAddress: string): Promise<any> {
+    contractAddress = toEthChecksumAddress(contractAddress);
+
     this.logger.debug('Request token info for', contractAddress);
 
     return dashboardCache.run('erc20info' + contractAddress, async() => {
