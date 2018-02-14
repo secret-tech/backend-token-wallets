@@ -19,6 +19,7 @@ export const ethereumAddressValidator = Joi.string().regex(/^0x[\da-fA-F]{40,40}
  * @param res
  * @param next
  */
+/* istanbul ignore next */
 export function commonFlowRequestMiddleware(scheme: Joi.Schema, data: any, res: Response, next: NextFunction) {
   const result = Joi.validate(data || {}, scheme, options);
 
@@ -35,6 +36,7 @@ export function commonFlowRequestMiddleware(scheme: Joi.Schema, data: any, res: 
 /**
  * Joi schema for verification validation.
  */
+/* istanbul ignore next */
 export const verificationValidateSchema = Joi.object().keys({
   verificationId: Joi.string().required(),
   code: Joi.string().required()
@@ -47,6 +49,7 @@ export const verificationValidateSchema = Joi.object().keys({
  * @param res
  * @param next
  */
+/* istanbul ignore next */
 export function verificationRequired(req: Request, res: Response, next: NextFunction) {
   const schema = Joi.object().keys({
     verification: verificationValidateSchema

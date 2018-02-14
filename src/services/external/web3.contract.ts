@@ -1,6 +1,7 @@
 import { Web3Client } from './web3.client';
 import { EncodedTransaction, Account } from 'web3/types';
 
+/* istanbul ignore next */
 /**
  *
  */
@@ -71,5 +72,51 @@ export default class Contract {
 
   onEvent(name: string) {
     return this.contract.events[name]();
+  }
+}
+
+/* istanbul ignore next */
+/**
+ * @TODO: Refactor this
+ */
+export class DummyContract extends Contract {
+  protected contract: any;
+
+  /**
+   *
+   * @param web3
+   * @param address
+   * @param abi
+   */
+  constructor() {
+    super(null, { eth: { Contract: function () {} } } , null, '');
+  }
+
+  /**
+   *
+   * @param params
+   */
+  async deploy(params: DeployContractInput, account: Account): Promise<EncodedTransaction> {
+    return {} as EncodedTransaction;
+  }
+
+  /**
+   *
+   * @param params
+   */
+  async executeMethod(params: ExecuteContractMethodInput, account: Account): Promise<EncodedTransaction> {
+    return {} as EncodedTransaction;
+  }
+
+  /**
+   *
+   * @param params
+   */
+  queryMethod(params: ExecuteContractConstantMethodInput): Promise<any> {
+    return Promise.resolve({});
+  }
+
+  onEvent(name: string) {
+    return Promise.resolve({});
   }
 }

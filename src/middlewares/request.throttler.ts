@@ -19,10 +19,12 @@ const defaultOptions = {
 /**
  * Throttler middleware. Should be singleton (for single redis connection).
  */
+/* istanbul ignore next */
 @injectable()
 export class ThrottlerMiddleware extends BaseMiddleware {
   private limiter: RateLimiter;
   private whiteList: Array<string>;
+  private redisClient;
 
   /**
    * constructor
@@ -31,7 +33,7 @@ export class ThrottlerMiddleware extends BaseMiddleware {
     super();
 
     const { redis: { url } } = config;
-    const redisClient = redis.createClient(url, {
+    this.redisClient = redis.createClient(url, {
       prefix: config.redis.prefix + '_thm_',
       retry_strategy: (options) => {
         if (options.error && options.error.code === 'ECONNREFUSED') {
@@ -48,7 +50,7 @@ export class ThrottlerMiddleware extends BaseMiddleware {
     });
 
     this.limiter = RateLimiter({
-      redis: redisClient,
+      redis: this.redisClient,
       ...defaultOptions
     });
     this.whiteList = defaultOptions.whiteList;

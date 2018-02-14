@@ -174,7 +174,7 @@ export class UserPasswordApplication {
    *
    * @param params
    */
-  async verifyResetPassword(params: ResetPasswordInput): Promise<any> {
+  async verifyResetPassword(params: VerificationInput & ResetPasswordInput): Promise<any> {
     // it better to use collate in mongo index
     params.email = params.email.toLowerCase();
 

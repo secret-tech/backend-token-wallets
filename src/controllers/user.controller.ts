@@ -16,6 +16,7 @@ const passwordRegex = /^[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/;
 /**
  * UserController
  */
+/* istanbul ignore next */
 @controller(
   '/user',
   'ThrottlerMiddleware'

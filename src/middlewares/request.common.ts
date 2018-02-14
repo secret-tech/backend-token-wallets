@@ -4,7 +4,7 @@ import { NOT_ACCEPTABLE } from 'http-status';
 import config from '../config';
 
 export function getRemoteIpFromRequest(req: Request): string {
-  let remoteIp = req.header('cf-connecting-ip') || req.ip;
+  let remoteIp = req.header('cf-connecting-ip') || req.header('x-real-ip') || req.ip;
   if (remoteIp.substr(0, 7) === '::ffff:') {
     remoteIp = remoteIp.substr(7);
   }
@@ -12,6 +12,7 @@ export function getRemoteIpFromRequest(req: Request): string {
   return remoteIp;
 }
 
+/* istanbul ignore next */
 export function httpsMiddleware(req: RemoteInfoRequest & Request, res: Response, next: NextFunction) {
   // @TODO: Use hemlet package from npm
   if (req.secure) {
@@ -21,6 +22,7 @@ export function httpsMiddleware(req: RemoteInfoRequest & Request, res: Response,
   next();
 }
 
+/* istanbul ignore next */
 export function contentMiddleware(req: RemoteInfoRequest & Request, res: Response, next: NextFunction) {
   if (req.path.indexOf('/_metrics/') === 0) {
     return next();
@@ -51,6 +53,7 @@ export function contentMiddleware(req: RemoteInfoRequest & Request, res: Respons
   return next();
 }
 
+/* istanbul ignore next */
 // @TODO: Use express-cors package from npm
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
   res.header('Access-Control-Allow-Origin', '*');

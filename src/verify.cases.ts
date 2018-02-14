@@ -27,7 +27,9 @@ const defaultInit = {
 function buildVerificationInitiate(verify: VerificationInitiateContext, context: any): VerificationInitiateContext {
   verify.setGenerateCode(defaultInit.symbolSet, defaultInit.length);
 
+  /* istanbul ignore next */
   switch (verify.getScope()) {
+
     case Verifications.USER_SIGNIN:
     // no break
 
@@ -63,6 +65,7 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
   verify.setMethod(VerifyMethod.EMAIL);
   buildVerificationInitiate(verify, context);
 
+  /* istanbul ignore next */
   switch (verify.getScope()) {
 
     case Verifications.USER_SIGNUP:

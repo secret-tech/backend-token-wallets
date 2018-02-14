@@ -1,20 +1,32 @@
 {
   "_id": "5a041e9295b9822e1b61754b",
-  "email": "kyc.verified@test.com",
-  "name": "ICO user",
-  "passwordHash": "$2a$10$2mOIlbr/90cdpKRotGJpg.dc9Kz6uud/7z6rZbZ.hXVHO83lfH0pS",
+  "email": "user1@user.com",
+  "name": "Username",
+  "passwordHash": "$2a$10$Eik6dOKrE49vZKIxoMqyGuAWS0aUBI1H9R4G5GhFzsyqKFlvcG6gG",
   "agreeTos": true,
-  "isVerified": true,
   "defaultVerificationMethod": "google_auth",
-  "verification": {
-    "id": "123",
-    "method": "email"
+  "isVerified": true,
+  "preferences": {
+    "notifications": {},
+    "verifications": {}
   },
-  "wallet": {
+  "createdAt": 1518504678,
+  "source": "unknown",
+  "wallets": [{
     "ticker": "ETH",
-    "address": "0x446cd17EE68bD5A567d43b696543615a94b01761",
+    "address": "0x6b78c67Bf14eEA09ce74e18A1f5Eb0D9403B4492",
     "balance": "0",
-    "salt": "salt",
-    "mnemonic": "pig turn bounce jeans left mouse hammer sketch hold during grief spirit"
-  }
+    "securityKey" : "m0lnMpDn8IXnSdib4UxnzcDsqoWaMzMgogtEx+2wRNmO6NJC3rWT9jSs21BQ93Jwo8QtkyEyU8ED/FzVBolkCg==",
+    "salt" : "XRezhQCkOAfqPOQjuaOmty/rlU0dAz+UUFJALGktgdWnH2E/AjFIurtkvqQ3MG+S4gfnGOA/HADoGOGvnrTaxEjYQKF7QXzcWF9Fiz4=",
+    "mnemonic" : "GCrEsUMMY/S5UETJ0YgyVdzcWt5s/z37qhs06DsNQ7ULPpfDkGv2pJwWhhH3zSqYIkDU+fbzv6x3iDeiRWDrw1q6CEd9OXOeaKzcysB9Yg84l7IgsR5Ini7xhbFaYYWM0O0cKVbxgMbHZXZyaXQXGkLFqRovUPD3",
+    "tokens" : [
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A74",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "0"
+      }
+    ]
+  }]
 }

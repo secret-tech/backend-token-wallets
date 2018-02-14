@@ -8,6 +8,7 @@ import { PrometheusMetrics } from '../services/metrics/prometheus.service';
 /**
  * MetricsController currently for prometheus only
  */
+/* istanbul ignore next */
 @controller(
   '/_metrics',
   'ThrottlerMiddleware',
