@@ -345,7 +345,9 @@ export class UserAccountApplication {
 
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
-    const user = await getConnection().getMongoRepository(User).findOneById(token.userId);
+    const user = (await getConnection().getMongoRepository(User).createEntityCursor({
+      _id: token.userId
+    }).toArray()).pop();
     if (!user) {
       throw new TokenNotFound('Access token is not any match with user');
     }

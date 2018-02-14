@@ -30,6 +30,7 @@ type ExtEthTransaction = EthTransaction & {
 export interface Web3EventInterface {
 }
 
+/* istanbul ignore next */
 function getTxStatusByReceipt(receipt: any): string {
   if (!receipt) {
     return TRANSACTION_STATUS_PENDING;
@@ -44,13 +45,12 @@ const CONCURRENT_BLOCK_PROCESS_COUNT = 3;
 const CONCURRENT_TRANSACTIONS_PROCESS_COUNT = 4;
 const TRANSACTION_CHECKING_INTERVAL_TIME: number = 15000;
 
-// @TODO: Need to refacting
 /* istanbul ignore next */
+// @TODO: Need to refacoring and test cover
 @injectable()
 export class Web3Event implements Web3EventInterface {
   private logger = Logger.getInstance('WEB3_EVENT');
   private web3: any;
-  // @todo: remove or replace this solution by outside service or simple setTimeout/setInterval
   private lastCheckingBlock: number = 0;
 
   private erc20Abi: {

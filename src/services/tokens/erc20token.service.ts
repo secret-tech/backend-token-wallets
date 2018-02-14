@@ -9,8 +9,9 @@ import { decimalsToUnitMap } from './helpers';
 
 const DEFAULT_DECIMALS = 18;
 
+/* istanbul ignore next */
 /**
- *
+ * @TODO: Refactor this
  */
 export class Erc20TokenService {
   protected erc20Token: Contract;

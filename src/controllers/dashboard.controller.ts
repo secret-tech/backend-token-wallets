@@ -14,6 +14,7 @@ import { commonFlowRequestMiddleware, ethereumAddressValidator } from '../middle
 /**
  * Dashboard controller
  */
+/* istanbul ignore next */
 @controller(
   '/dashboard',
   'ThrottlerMiddleware',

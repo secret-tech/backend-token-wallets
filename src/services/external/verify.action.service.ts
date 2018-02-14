@@ -160,18 +160,18 @@ export class VerifyActionService {
   async initiate(context: VerificationInitiateContext, payload?: any):
   Promise<{verifyInitiated: InitiatedVerification, verifyInitiatedResult: InitiateResult}> {
 
-    if (context.getMethod() === VerifyMethod.INLINE) {
+    if (context.getMethod() === VerifyMethod.INLINE || config.app.env === 'test') {
       // @TODO: Maybe better only uuid
       const verifyId = uuid.v4() + '-01';
-      this.verifyPayloads.set(verifyId, payload);
+      this.verifyPayloads.set(verifyId, { scope: context.getScope(), payload });
       return {
         verifyInitiated: {
           verificationId: verifyId,
-          method: 'inline'
+          method: VerifyMethod.INLINE
         },
         verifyInitiatedResult: {
           verificationId: verifyId,
-          method: 'inline',
+          method: VerifyMethod.INLINE,
           status: 200,
           attempts: 0,
           expiredOn: 0
@@ -217,10 +217,15 @@ export class VerifyActionService {
   async verify(scope: string, verification: VerificationData, customArgs?: any):
   Promise<{ verifyPayload: any, verifyResult: ValidationResult }> {
     if (this.verifyPayloads.has(verification.verificationId)) {
-      const payload = this.verifyPayloads.get(verification.verificationId);
+      const verifyInline = this.verifyPayloads.get(verification.verificationId);
+
+      if (verifyInline.scope !== scope) {
+        throw new VerificationIsNotFound('Invalid scope');
+      }
+
       this.verifyPayloads.del(verification.verificationId);
       return {
-        verifyPayload: payload,
+        verifyPayload: verifyInline.payload,
         verifyResult: {
           status: 200
         }

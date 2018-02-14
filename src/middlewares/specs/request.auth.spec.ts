@@ -10,6 +10,5 @@ describe('AuthMiddleware', () => {
   it('should create auth middleware', () => {
     let authMiddleware = container.get<AuthMiddleware>('AuthMiddleware');
     expect(authMiddleware).is.instanceof(AuthMiddleware);
-    expect(true).is.true;
   });
 });

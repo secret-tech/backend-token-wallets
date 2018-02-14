@@ -1,5 +1,7 @@
 {
   "_id": "59f0a82ef6cddb1e0158e64b",
   "token": "verified_token",
-  "verified": true
+  "verified": true,
+  "createdAt": 1518504678,
+  "userId": "5a041e9295b9822e1b61754b"
 }

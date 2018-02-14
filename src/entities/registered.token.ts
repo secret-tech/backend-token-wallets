@@ -29,6 +29,7 @@ export class RegisteredToken {
   @Column()
   createdAt: number;
 
+  /* istanbul ignore next */
   static createRegisteredToken(data: any) {
     const t = new RegisteredToken();
     t.contractAddress = toEthChecksumAddress(data.contractAddress);

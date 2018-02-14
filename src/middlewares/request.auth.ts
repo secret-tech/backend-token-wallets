@@ -9,6 +9,7 @@ import { VerifiedToken } from '../entities/verified.token';
 import { AuthenticatedRequest } from '../interfaces';
 import { AuthClientType, AuthClientInterface } from '../services/external/auth.client';
 
+/* istanbul ignore next */
 @injectable()
 export class AuthMiddleware extends BaseMiddleware {
   protected expressBearer;
