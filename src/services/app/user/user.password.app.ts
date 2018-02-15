@@ -140,6 +140,9 @@ export class UserPasswordApplication {
    * @param params
    */
   async initiateResetPassword(params: ResetPasswordInput): Promise<BaseInitiateResult> {
+    // it better to use collate in mongo index
+    params.email = params.email.toLowerCase();
+
     const user = await getConnection().getMongoRepository(User).findOne({
       email: params.email
     });
@@ -171,7 +174,10 @@ export class UserPasswordApplication {
    *
    * @param params
    */
-  async verifyResetPassword(params: ResetPasswordInput): Promise<any> {
+  async verifyResetPassword(params: VerificationInput & ResetPasswordInput): Promise<any> {
+    // it better to use collate in mongo index
+    params.email = params.email.toLowerCase();
+
     const user = await getConnection().getMongoRepository(User).findOne({
       email: params.email
     });
@@ -199,6 +205,9 @@ export class UserPasswordApplication {
    * @param params
    */
   async resetPasswordEnter(params: { email: string, password: string, resetId: string }) {
+    // it better to use collate in mongo index
+    params.email = params.email.toLowerCase();
+
     const user = await getConnection().getMongoRepository(User).findOne({
       email: params.email
     });

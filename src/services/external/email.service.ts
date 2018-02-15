@@ -7,6 +7,7 @@ export interface EmailServiceInterface {
   send(sender: string, recipient: string, subject: string, text: string): Promise<any>;
 }
 
+/* istanbul ignore next */
 @injectable()
 export class DummyMailService implements EmailServiceInterface {
   private logger: Logger = Logger.getInstance('DUMMYMAIL_SERVICE');
@@ -23,6 +24,7 @@ export class DummyMailService implements EmailServiceInterface {
 
 const NSQ_TOPIC_NOTIFICATION_EMAIL = 'notifications.email.default';
 
+/* istanbul ignore next */
 @injectable()
 export class NsqChannelMailService implements EmailServiceInterface {
   private logger: Logger = Logger.getInstance('NSQ_CHANNELMAIL_SERVICE');

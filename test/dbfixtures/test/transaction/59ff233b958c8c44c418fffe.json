@@ -3,10 +3,11 @@
   "transactionHash": "0x8e058020f00816335fffbec575e4e9c84ab4088890e0d7395058618637809857",
   "timestamp": 1509885929,
   "blockNumber": 2009428,
-  "from": "0x99eb89a5D15A6D487da3f3C1fC4fc2378eE227aF",
+  "from": "0x6b78c67Bf14eEA09ce74e18A1f5Eb0D9403B4492",
   "to": "0x54c0B824d575c60F3B80ba1ea3A0cCb5EE3F56eA",
-  "ethAmount": "0",
-  "erc20Amount": "10",
+  "amount": "1000",
+  "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A74",
   "status": "confirmed",
-  "type": "erc20_transfer"
+  "type": "erc20_transfer",
+  "details": "{\"gas\":\"10000\",\"gasPrice\":\"5\"}"
 }

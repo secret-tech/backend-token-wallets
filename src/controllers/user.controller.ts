@@ -16,6 +16,7 @@ const passwordRegex = /^[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/;
 /**
  * UserController
  */
+/* istanbul ignore next */
 @controller(
   '/user',
   'ThrottlerMiddleware'
@@ -123,7 +124,7 @@ export class UserController {
         contractAddress: ethereumAddressValidator.required(),
         symbol: Joi.string().required(),
         name: Joi.string().optional(),
-        decimals: Joi.number().required().min(0).max(28)
+        decimals: Joi.number().valid(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30).required()
       }), req.body, res, next);
     }
   )
@@ -142,7 +143,7 @@ export class UserController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         oldPassword: Joi.string().required(),
-        newPassword: Joi.string().required().regex(passwordRegex)
+        newPassword: Joi.string().regex(passwordRegex).disallow(Joi.ref('oldPassword')).required()
       }), req.body, res, next);
     }
   )

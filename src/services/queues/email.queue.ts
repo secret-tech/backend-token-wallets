@@ -9,6 +9,7 @@ export interface EmailQueueInterface {
   addJob(data: any);
 }
 
+/* istanbul ignore next */
 /**
  *
  */

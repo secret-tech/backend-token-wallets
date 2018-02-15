@@ -4,6 +4,7 @@ import metrics from './';
 const gaugeSpecificationLabels = {
 };
 
+/* istanbul ignore next */
 /**
  * Prometheus metrics
  */

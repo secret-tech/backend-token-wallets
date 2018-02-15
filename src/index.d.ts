@@ -187,9 +187,8 @@ declare interface VerifyLoginInput extends VerificationInput {
   accessToken: string;
 }
 
-declare interface ResetPasswordInput extends VerificationInput {
+declare interface ResetPasswordInput {
   email: string;
-  password: string;
 }
 
 declare interface InitiateChangePasswordInput {

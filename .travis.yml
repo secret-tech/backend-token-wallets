@@ -1,7 +1,19 @@
+language: node_js
+node_js: '8.6'
 sudo: required
 services:
 - docker
+cache:
+  directories:
+  - node_modules
+  - $HOME/.npm
+install:
+- npm install
+- docker-compose -f docker-compose.test.yml build --no-cache api
 script:
+- docker-compose -f docker-compose.test.yml run --rm api sh -c "npm run test:cover"
+after_success:
+- npm run build
 - chmod ugo+x ./build.sh
 - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [ "$TRAVIS_BRANCH"
   == "dev" ]; then echo "stage"; else echo "dev-$(git rev-parse --short HEAD)"; fi`

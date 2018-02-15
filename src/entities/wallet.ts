@@ -35,6 +35,10 @@ export class Wallet {
     return wallet;
   }
 
+  getTokenByContractAddress(contractAddress: string): Token {
+    return this.tokens.filter(t => t.contractAddress.toLowerCase() === contractAddress.toLocaleLowerCase()).pop();
+  }
+
   addToken(token: Token) {
     this.tokens = this.tokens || [];
     if (!this.tokens.filter(t => t.contractAddress.toLowerCase() === token.contractAddress.toLowerCase()).length) {

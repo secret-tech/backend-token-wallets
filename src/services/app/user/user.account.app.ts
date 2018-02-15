@@ -106,6 +106,9 @@ export class UserAccountApplication {
    * @return promise
    */
   async create(userData: InputUserData): Promise<CreatedUserData> {
+    // it better to use collate in mongo index
+    userData.email = userData.email.toLowerCase();
+
     if (userData.password === userData.paymentPassword) {
       throw new InvalidPassword('Login and payment passwords are matched');
     }
@@ -261,6 +264,9 @@ export class UserAccountApplication {
    * @return promise
    */
   async initiateLogin(loginData: InitiateLoginInput, ip: string): Promise<InitiateLoginResult> {
+    // it better to use collate in mongo index
+    loginData.email = loginData.email.toLowerCase();
+
     const user = await getConnection().getMongoRepository(User).findOne({
       email: loginData.email
     });
@@ -339,7 +345,9 @@ export class UserAccountApplication {
 
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
-    const user = await getConnection().getMongoRepository(User).findOneById(token.userId);
+    const user = (await getConnection().getMongoRepository(User).createEntityCursor({
+      _id: token.userId
+    }).toArray()).pop();
     if (!user) {
       throw new TokenNotFound('Access token is not any match with user');
     }

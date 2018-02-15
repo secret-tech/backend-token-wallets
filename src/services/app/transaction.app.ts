@@ -22,6 +22,8 @@ import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationIn
 import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../external/verify.action.service';
 import { EncodedTransaction } from 'web3/types';
 import { toEthChecksumAddress, MasterKeySecret, decryptTextByUserMasterKey } from '../crypto';
+import { fromUnitValueToWei, fromWeiToUnitValue } from '../tokens/helpers';
+import { Token } from '../../entities/token';
 
 export interface TransactionSendData {
   to: string;
@@ -84,7 +86,7 @@ export class TransactionApplication {
    *
    * @param user
    */
-  private getKnownUserErc20Tokens(user: User) {
+  private getKnownUserErc20Tokens(user: User): { [k: string]: Token; } {
     const knownUserTokens = {};
 
     user.wallets[0].tokens.forEach(t => {
@@ -115,6 +117,9 @@ export class TransactionApplication {
           const contractAddress = tx.contractAddress ? toEthChecksumAddress(tx.contractAddress) : '';
           return {
             ...tx, token: knownUserTokens[contractAddress],
+            amount: tx.type === ERC20_TRANSFER && knownUserTokens[contractAddress] ?
+              fromWeiToUnitValue(tx.amount, knownUserTokens[contractAddress].decimals || 0) :
+              tx.amount,
             details: undefined,
             // remove contract address if token is known
             contractAddress: tx.type === ERC20_TRANSFER && !knownUserTokens[contractAddress] ?
@@ -150,8 +155,18 @@ export class TransactionApplication {
       throw new IncorrectMnemonic('Incorrect payment password, invalid address');
     }
 
+    if (transData.to.toLowerCase() === account.address.toLowerCase()) {
+      throw new NotCorrectTransactionRequest('Senseless operation, to send to yourself');
+    }
+
     if (transData.type === ERC20_TRANSFER && !transData.contractAddress) {
       throw new NotCorrectTransactionRequest('Empty token address');
+    }
+
+    let amount = ('' + transData.amount).replace(/0+$/, ''); // remove last zeroes
+    if (transData.type === ERC20_TRANSFER) {
+      const token = user.wallets[0].getTokenByContractAddress(transData.contractAddress);
+      amount = fromUnitValueToWei(amount, token && token.decimals || 0);
     }
 
     const gas = '' + Math.max(+transData.gas, 30000);
@@ -159,7 +174,7 @@ export class TransactionApplication {
     const txInput = {
       from: user.wallets[0].address,
       to: transData.to,
-      amount: '' + transData.amount,
+      amount: '' + amount,
       gas,
       gasPrice
     };

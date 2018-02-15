@@ -4,6 +4,7 @@ interface Tags {
   [key: string]: string;
 }
 
+/* istanbul ignore next */
 /**
  * Proxy service
  * @TODO: Think about: may it'll specialized methods be better than common with consts:

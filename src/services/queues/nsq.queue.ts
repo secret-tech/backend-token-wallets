@@ -2,6 +2,7 @@ import { Writer } from 'nsqjs';
 import config from '../../config';
 import { Logger } from '../../logger';
 
+/* istanbul ignore next */
 /**
  *
  */
