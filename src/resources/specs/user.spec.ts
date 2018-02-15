@@ -8,10 +8,11 @@ import { Verifications } from '../../services/external/verify.action.service';
 const { expect } = chai;
 
 describe('User Entity', () => {
+  const newWalletAddres = '0x1234567890123456789012345678901234567890';
   let user: User;
 
   beforeEach(() => {
-    user = User.createUser({ _id: '1234' });
+    user = User.createUser({ _id: '1234', wallets: [{ address: '0x1234', index: 0 }] });
   });
 
   it('should notification check is true by default', () => {
@@ -23,11 +24,31 @@ describe('User Entity', () => {
   });
 
   it('should add new wallet', () => {
-    const address = '0x1234567890123456789012345678901234567890';
+    const address = newWalletAddres;
     user.addWallet(Wallet.createWallet({ address }));
 
-    expect(user.wallets.length).is.equal(1);
-    expect(user.wallets[0].address).is.equal(address);
+    expect(user.wallets.length).is.equal(2);
+    expect(user.wallets[1].address).is.equal(address);
+  });
+
+  it('should find first wallet', () => {
+    const wallet = user.getWalletByAddress(user.wallets[0].address);
+
+    expect(wallet).is.not.undefined;
+    expect(user.wallets[0].address).is.equal(wallet.address);
+  });
+
+  it('shouldn\'t find wallet', () => {
+    expect(user.getWalletByAddress(newWalletAddres)).is.undefined;
+  });
+
+  it('should get first wallet index', () => {
+    user.wallets = [];
+    expect(user.getNextWalletIndex()).is.equal(0);
+  });
+
+  it('should get second wallet index', () => {
+    expect(user.getNextWalletIndex()).is.equal(1);
   });
 });
 

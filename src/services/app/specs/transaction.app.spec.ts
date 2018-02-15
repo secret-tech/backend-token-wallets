@@ -25,6 +25,7 @@ describe('Transaction App', () => {
 
   const commontInitTransactionData = {
     type: ETHEREUM_TRANSFER,
+    from: '',
     to: '0xBd0cb067A75C23EFB290B4e223059Af8E4AF4fd8',
     amount: '1000',
     gas: '10000',
@@ -33,13 +34,15 @@ describe('Transaction App', () => {
 
   beforeEach(async () => {
     user = await getMongoRepository(User).findOne({ email: 'user1@user.com' });
+    commontInitTransactionData.from = user.wallets[0].address;
+
     container.snapshot();
 
     web3Mock = TypeMoq.Mock.ofType<Web3ClientInterface>(Web3Client);
     container.rebind<Web3ClientInterface>(Web3ClientType).toConstantValue(web3Mock.object);
 
     web3Mock.setup((x) => x.sufficientBalance(TypeMoq.It.isAny())).returns(async () => true);
-    web3Mock.setup((x) => x.getAccountByMnemonicAndSalt(TypeMoq.It.isAny(), TypeMoq.It.isAny()))
+    web3Mock.setup((x) => x.getAccountByMnemonicAndSalt(TypeMoq.It.isAny(), TypeMoq.It.isAny(), TypeMoq.It.isAny()))
       .returns(() => ({
         address: user.wallets[0].address
       }));
@@ -76,7 +79,7 @@ describe('Transaction App', () => {
   });
 
   it('should get transactions history', async () => {
-    const history = await transaction.transactionHistory(user);
+    const history = await transaction.transactionHistory(user, user.wallets[0].address);
 
     expect(history.length).is.equal(1);
     expect(history[0].amount).is.equal('0.000000000000001');

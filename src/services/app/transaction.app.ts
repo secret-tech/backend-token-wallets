@@ -162,8 +162,6 @@ export class TransactionApplication {
     }
 
     const salt = decryptTextByUserMasterKey(msc, user.salt, paymentPassword, user.securityKey);
-
-
     const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt, wallet.index);
     if (account.address !== wallet.address) {
       throw new IncorrectMnemonic('Incorrect payment password, invalid address');

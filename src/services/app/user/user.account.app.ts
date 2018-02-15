@@ -2,6 +2,7 @@ import { injectable, inject } from 'inversify';
 import { getConnection } from 'typeorm';
 import * as bcrypt from 'bcrypt-nodejs';
 
+import * as util from 'util';
 import config from '../../../config';
 
 import { AuthClientType, AuthClientInterface } from '../../external/auth.client';
@@ -32,9 +33,12 @@ import { VerificationInitiateContext } from '../../external/verify.context.servi
 import { Wallet } from '../../../entities/wallet';
 import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod, getAllVerifications } from '../../external/verify.action.service';
 import { Token } from '../../../entities/token';
-import { writeFileSync, readFileSync, writeFile } from 'fs';
+import { writeFile, mkdir } from 'fs';
 import { join } from 'path';
 import { Notifications, Preferences, getAllNotifications, BooleanState } from '../../../entities/preferences';
+
+const writeFilePromised = util['promisify'](writeFile);
+const makeDirPromised = util['promisify'](mkdir);
 
 /**
  * UserAccountApplication
@@ -190,15 +194,25 @@ export class UserAccountApplication {
     return `${user.id.toHexString()}_${getSha256Hash(new Buffer(user.email, 'utf-8')).toString('hex').slice(0, 24)}`;
   }
 
-  private async saveRecoveryKey(recoveryKey: string, user: User) {
+  private async saveRecoveryKey(recoveryKey: any, user: User): Promise<void> {
+    const recoveryFileName = this.getRecoveryNameForUser(user);
     // @TODO: Save in more safe space
-    writeFile(
+    return makeDirPromised(
       join(
         config.crypto.recoveryFolder,
-        this.getRecoveryNameForUser(user)
-      ),
-      JSON.stringify(recoveryKey)
-    );
+        recoveryFileName.slice(-2)
+      )
+    ).catch(() => { /* skip */ })
+    .then(() => {
+      return writeFilePromised(
+        join(
+          config.crypto.recoveryFolder,
+          recoveryFileName.slice(-2),
+          recoveryFileName
+        ),
+        JSON.stringify(recoveryKey)
+      );
+    });
   }
 
   private async activateUserAndGetNewWallets(user: User): Promise<any[]> {
@@ -210,7 +224,11 @@ export class UserAccountApplication {
 
     this.logger.debug('Save recovery key for', user.email);
 
-    this.saveRecoveryKey(recoveryKey, user);
+    await this.saveRecoveryKey({
+      ...recoveryKey,
+      userId: user.id,
+      userEmail: user.email
+    }, user);
 
     this.logger.debug('Save user state', user.email);
 
@@ -550,6 +568,12 @@ export class UserAccountApplication {
     };
   }
 
+  /**
+   *
+   * @param user
+   * @param type
+   * @param paymentPassword
+   */
   async createAndAddNewWallet(user: User, type: string, paymentPassword: string): Promise<any> {
     this.logger.debug('Create and add new wallet', user.email, type);
 
