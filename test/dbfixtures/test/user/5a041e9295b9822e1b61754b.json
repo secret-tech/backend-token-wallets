@@ -12,6 +12,7 @@
   },
   "createdAt": 1518504678,
   "source": "unknown",
+  "recoveryKey": "invalid",
   "securityKey" : "m0lnMpDn8IXnSdib4UxnzcDsqoWaMzMgogtEx+2wRNmO6NJC3rWT9jSs21BQ93Jwo8QtkyEyU8ED/FzVBolkCg==",
   "salt" : "XRezhQCkOAfqPOQjuaOmty/rlU0dAz+UUFJALGktgdWnH2E/AjFIurtkvqQ3MG+S4gfnGOA/HADoGOGvnrTaxEjYQKF7QXzcWF9Fiz4=",
   "mnemonic" : "GCrEsUMMY/S5UETJ0YgyVdzcWt5s/z37qhs06DsNQ7ULPpfDkGv2pJwWhhH3zSqYIkDU+fbzv6x3iDeiRWDrw1q6CEd9OXOeaKzcysB9Yg84l7IgsR5Ini7xhbFaYYWM0O0cKVbxgMbHZXZyaXQXGkLFqRovUPD3",

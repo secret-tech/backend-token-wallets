@@ -100,13 +100,16 @@ export class UserAccountApplication {
     } else {
       this.logger.debug('First creation of wallet for', user.email);
 
-      const recoveryKey = getRecoveryMasterKey(msc);
+      const mscRecoveryKey = new MasterKeySecret();
+      mscRecoveryKey.key = Buffer.from(config.crypto.globalKey, 'hex');
 
-      user.securityKey = JSON.stringify([getUserMasterKey(msc, paymentPassword), {
-        mac: recoveryKey.mac.toString('base64'),
-        pubkey: recoveryKey.pubkey.toString('base64'),
-        msg: recoveryKey.msg.toString('base64')
-      }]);
+      const recoveryKey = getRecoveryMasterKey(msc);
+      user.recoveryKey =  JSON.stringify({
+        mac: mscRecoveryKey.encrypt(recoveryKey.mac).toString('base64'),
+        pubkey: mscRecoveryKey.encrypt(recoveryKey.pubkey).toString('base64'),
+        msg: mscRecoveryKey.encrypt(recoveryKey.msg).toString('base64')
+      });
+      user.securityKey = JSON.stringify(getUserMasterKey(msc, paymentPassword));
       user.salt = encryptText(msc, salt);
       user.mnemonic = encryptText(msc, mnemonic);
     }
@@ -194,6 +197,7 @@ export class UserAccountApplication {
     return `${user.id.toHexString()}_${getSha256Hash(new Buffer(user.email, 'utf-8')).toString('hex').slice(0, 24)}`;
   }
 
+  // @TODO: remove
   private async saveRecoveryKey(recoveryKey: any, user: User): Promise<void> {
     const recoveryFileName = this.getRecoveryNameForUser(user);
     // @TODO: Save in more safe space
@@ -216,21 +220,9 @@ export class UserAccountApplication {
   }
 
   private async activateUserAndGetNewWallets(user: User): Promise<any[]> {
-    this.logger.debug('Prepare seckey', user.email);
+    this.logger.debug('Save verified user state', user.email);
 
-    const [userKey, recoveryKey] = JSON.parse(user.securityKey);
-    user.securityKey = userKey;
     user.isVerified = true;
-
-    this.logger.debug('Save recovery key for', user.email);
-
-    await this.saveRecoveryKey({
-      ...recoveryKey,
-      userId: user.id,
-      userEmail: user.email
-    }, user);
-
-    this.logger.debug('Save user state', user.email);
 
     await this.userRepository.save(user);
 
@@ -290,7 +282,7 @@ export class UserAccountApplication {
       subject: 'You are confirmed your account',
       text: successSignUpTemplate(user.name)
     });
-
+console.log('>>>>>>>>', user);
     return {
       accessToken: token.token,
       wallets: newWallets

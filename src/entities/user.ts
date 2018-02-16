@@ -45,6 +45,9 @@ export class User {
   securityKey: string;
 
   @Column()
+  recoveryKey: string;
+
+  @Column()
   salt: string;
 
   @Column()
@@ -59,6 +62,7 @@ export class User {
   static createUser(data: any) {
     const user = new User();
     user.securityKey = data.securityKey;
+    user.recoveryKey = data.recoveryKey;
     user.salt = data.salt;
     user.mnemonic = data.mnemonic;
     user.wallets = data.wallets || [];
