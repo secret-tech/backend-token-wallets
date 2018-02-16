@@ -139,6 +139,39 @@ export class UserController {
    * @param res
    */
   @httpPost(
+    '/me/changePaymentPassword/initiate',
+    'AuthMiddleware',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        oldPaymentPassword: Joi.string().required(),
+        newPaymentPassword: Joi.string().regex(passwordRegex).disallow(Joi.ref('oldPaymentPassword')).required()
+      }), req.body, res, next);
+    }
+  )
+  async initiateChangePaymentPassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
+    res.json(await this.userPasswordApp.initiateChangePaymentPassword(req.app.locals.user, req.body));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPost(
+    '/me/changePaymentPassword/verify',
+    'AuthMiddleware',
+    'VerificationRequiredValidation'
+  )
+  async verifyChangePaymentPassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
+    res.json(await this.userPasswordApp.verifyChangePaymentPassword(req.app.locals.user, req.body));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPost(
     '/me/changePassword/initiate',
     'AuthMiddleware',
     (req, res, next) => {

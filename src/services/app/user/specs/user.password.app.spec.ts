@@ -21,6 +21,7 @@ describe('User Password App', () => {
   let userPassword: UserPasswordApplication;
   let authMock: TypeMoq.IMock<AuthClientInterface>;
   const newTokenName = 'new_token';
+  const userPaymentPassword = '1q@W3e$R5';
   const userCredentialParams = {
     email: 'user1@USER.COM',
     password: '123qweASD!@#'
@@ -115,4 +116,23 @@ describe('User Password App', () => {
     expect(resultReset.isReset).is.true;
   });
 
+  it('should fail to change to new paymentPassword with invalid old paymentPassword', async () => {
+    expect(userPassword.initiateChangePaymentPassword(user, {
+      oldPaymentPassword: 'invalid_payment_password',
+      newPaymentPassword: 'new_payment_password'
+    })).to.be.rejectedWith(InvalidPassword);
+  });
+
+  it('should change paymentPassword', async () => {
+    const verifyData = await userPassword.initiateChangePaymentPassword(user, {
+      oldPaymentPassword: userPaymentPassword,
+      newPaymentPassword: '32$%^QWEqwe'
+    });
+
+    expect(verifyData.verification).is.not.undefined;
+
+    const resultData = await userPassword.verifyChangePaymentPassword(user, verifyData as any);
+
+    expect(resultData.isChanged).is.true;
+  });
 });

@@ -9,6 +9,7 @@ import { EmailQueueType, EmailQueueInterface } from '../../queues/email.queue';
 
 import successPasswordResetTemplate from '../../../resources/emails/8_success_password_reset';
 import successPasswordChangeTemplate from '../../../resources/emails/28_success_password_change';
+import successPaymentPasswordChangeTemplate from '../../../resources/emails/28_success_pay_password_change';
 
 import {
   UserNotFound,
@@ -24,6 +25,7 @@ import { VerificationInitiateContext } from '../../external/verify.context.servi
 import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../../external/verify.action.service';
 import { UserTimedId } from '../../timed.id';
 import { Notifications } from '../../../entities/preferences';
+import { MasterKeySecret, decryptTextByUserMasterKey, decryptUserMasterKey, getUserMasterKey } from '../../crypto';
 
 /**
  * UserPasswordApplication
@@ -245,6 +247,79 @@ export class UserPasswordApplication {
 
     return {
       isReset: true
+    };
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async initiateChangePaymentPassword(user: User, params: any): Promise<BaseInitiateResult> {
+    this.logger.debug('Initiate changing payment password', user.email);
+
+    const msc = new MasterKeySecret();
+
+    if (!decryptTextByUserMasterKey(msc, user.salt, params.oldPaymentPassword, user.securityKey)) {
+      throw new InvalidPassword('Invalid payment password');
+    }
+
+    this.logger.debug('Prepare new security key', user.email);
+
+    decryptUserMasterKey(msc, user.securityKey, params.oldPaymentPassword);
+    const newSecurityKey = getUserMasterKey(msc, params.newPaymentPassword);
+
+    const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_PAYMENT_PASSWORD, user.email);
+    if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
+      buildScopeEmailVerificationInitiate(
+        initiateVerification,
+        { user }
+      );
+    }
+
+    if (!user.isVerificationEnabled(Verifications.USER_CHANGE_PAYMENT_PASSWORD)) {
+      initiateVerification.setMethod(VerifyMethod.INLINE);
+    }
+
+    this.logger.debug('Initiate verification for changing payment password', user.email);
+
+    const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
+      securityKey: newSecurityKey
+    });
+
+    return {
+      verification: verifyInitiated
+    };
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async verifyChangePaymentPassword(user: User, verify: VerificationInput): Promise<any> {
+
+    this.logger.debug('Verify atempt to change payment password', user.email);
+
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_PAYMENT_PASSWORD, verify.verification);
+
+    this.logger.debug('Save changed payment password', user.email);
+
+    user.securityKey = verifyPayload.securityKey;
+
+    await this.userRepository.save(user);
+
+    if (user.isNotificationEnabled(Notifications.USER_CHANGE_PAYMENT_PASSWORD)) {
+      this.emailQueue.addJob({
+        sender: config.email.from.general,
+        recipient: user.email,
+        subject: 'Payment Password Change Notification',
+        text: successPaymentPasswordChangeTemplate(user.name)
+      });
+    }
+
+    return {
+      isChanged: true
     };
   }
 }

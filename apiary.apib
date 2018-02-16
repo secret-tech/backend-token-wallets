@@ -170,6 +170,67 @@ Authentication attempts with not verified token will result in 401 response.
             "isVerified": true
         }
 
+
+## Initiate payment password change [/user/me/changePaymentPassword/initiate]
+
+### Initiate payment password change [POST]
+
++ Request (application/json)
+    + Attributes
+        + oldPaymentPassword: `passwordA1` (required, string)
+        + newPaymentPassword: `passwordA6` (required, string) - regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z0\d!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]{8,}$/
+
+    + Headers
+
+            Authorization: Bearer token
+            Accept: application/json
+
+    + Body
+
+            {
+                "oldPaymentPassword": "test12A6!@#$%^&*()_-=+|/",
+                "newPaymentPassword": "passwordA1"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "verification": {
+                "verificationId": "8f9ba03c-e903-459c-adb9-7594865a03a4",
+                "method": "email"
+            }
+        }
+
+## Verify payment password change [/user/me/changePaymentPassword/verify]
+
+### Verify payment password change [POST]
+
++ Request (application/json)
+    + Attributes
+        + verification (required, object)
+            + verificationId: `UUID` (required, string)
+            + code: `000000` (required, string)
+
+    + Headers
+
+            Authorization: Bearer token
+            Accept: application/json
+
+    + Body
+
+            {
+                "verification": {
+                    "verificationId": "b41498d8-a9db-4bb5-b338-0e8f47582066",
+                    "code": "813365"
+                }
+            }
+
++ Response 200 (application/json)
+
+        {
+            "isChanged": true
+        }
+
 ## Initiate password change [/user/me/changePassword/initiate]
 
 ### Initiate password change [POST]

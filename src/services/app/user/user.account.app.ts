@@ -236,8 +236,6 @@ export class UserAccountApplication {
 
     this.logger.debug('Prepare response wallets for', user.email);
 
-    const msc = new MasterKeySecret();
-
     return [{
       ticker: 'ETH',
       address: user.wallets[0].address,

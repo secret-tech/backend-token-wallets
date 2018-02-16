@@ -5,6 +5,7 @@ import { getAllAllowedVerifications } from '../services/external/verify.action.s
 export enum Notifications {
   USER_SIGNIN = 'user_signin',
   USER_CHANGE_PASSWORD = 'user_change_password',
+  USER_CHANGE_PAYMENT_PASSWORD = 'user_change_payment_password',
   USER_RESET_PASSWORD = 'user_reset_password'
 }
 
@@ -12,6 +13,7 @@ export function getAllNotifications() {
   return [
     Notifications.USER_SIGNIN,
     Notifications.USER_CHANGE_PASSWORD,
+    Notifications.USER_CHANGE_PAYMENT_PASSWORD,
     Notifications.USER_RESET_PASSWORD
   ];
 }
