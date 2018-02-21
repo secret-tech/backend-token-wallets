@@ -26,7 +26,7 @@ import { fromUnitValueToWei, fromWeiToUnitValue } from '../tokens/helpers';
 import { Token } from '../../entities/token';
 
 export interface TransactionSendData {
-  from: string;
+  from?: string;
   to: string;
   type: string;
   amount: string;
@@ -103,6 +103,8 @@ export class TransactionApplication {
    * Get transaction history
    */
   async transactionHistory(user: User, walletAddress: string): Promise<any> {
+    walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
+
     this.logger.debug('Request transactions history for', user.email, walletAddress);
 
     const wallet = user.getWalletByAddress(walletAddress);
@@ -147,6 +149,8 @@ export class TransactionApplication {
    * @param ethAmount
    */
   async transactionSendInitiate(user: User, paymentPassword: string, transData: TransactionSendData): Promise<any> {
+    transData.from = transData.from || user.getSingleWalletOrThrowError().address;
+
     this.logger.debug('Initiate transaction', user.email, transData.type, transData.from, transData.to);
 
     const wallet = user.getWalletByAddress(transData.from);

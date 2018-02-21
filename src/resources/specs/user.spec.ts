@@ -4,6 +4,7 @@ import { Wallet } from '../../entities/wallet';
 import { User } from '../../entities/user';
 import { Notifications } from '../../entities/preferences';
 import { Verifications } from '../../services/external/verify.action.service';
+import { WalletNotFound } from '../../exceptions';
 
 const { expect } = chai;
 
@@ -42,6 +43,15 @@ describe('User Entity', () => {
     expect(user.getWalletByAddress(newWalletAddres)).is.undefined;
   });
 
+  it('should get first single wallet', () => {
+    expect(user.getSingleWalletOrThrowError()).is.not.undefined;
+  });
+
+  it('should throw to get single wallet if many user wallets', () => {
+    user.addWallet(Wallet.createWallet({ address: newWalletAddres }));
+    expect(() => user.getSingleWalletOrThrowError()).is.throw(WalletNotFound);
+  });
+
   it('should get first wallet index', () => {
     user.wallets = [];
     expect(user.getNextWalletIndex()).is.equal(0);
@@ -51,4 +61,3 @@ describe('User Entity', () => {
     expect(user.getNextWalletIndex()).is.equal(1);
   });
 });
-

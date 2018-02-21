@@ -33,7 +33,7 @@ export class DashboardController {
     '/',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
-        walletAddress: ethereumAddressValidator.required()
+        walletAddress: ethereumAddressValidator.optional()
       }), req.query, res, next);
     }
   )
@@ -65,7 +65,7 @@ export class DashboardController {
     '/transactions',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
-        walletAddress: ethereumAddressValidator.required()
+        walletAddress: ethereumAddressValidator.optional()
       }), req.query, res, next);
     }
   )
@@ -105,7 +105,7 @@ export class DashboardController {
     '/transaction/initiate',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
-        from: ethereumAddressValidator.required(),
+        from: ethereumAddressValidator.optional(),
         to: ethereumAddressValidator.required(),
         type: Joi.string().valid('eth_transfer', 'erc20_transfer').required(),
         contractAddress: ethereumAddressValidator.optional(),

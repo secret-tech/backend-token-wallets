@@ -5,6 +5,7 @@ import { Wallet } from './wallet';
 import { base64encode } from '../helpers/helpers';
 import { Preferences, Notifications } from './preferences';
 import { Verifications, VerifyMethod } from '../services/external/verify.action.service';
+import { WalletNotFound } from '../exceptions';
 
 @Entity()
 @Index('user_email', () => ({
@@ -105,5 +106,13 @@ export class User {
     return !this.preferences || !this.preferences.verifications ||
       this.preferences.verifications[verification] ||
       this.preferences.verifications[verification] === undefined;
+  }
+
+  getSingleWalletOrThrowError(): Wallet {
+    if (this.wallets.length !== 1) {
+      throw new WalletNotFound('Single wallet cant be found, you should obviously specified a wallet address');
+    }
+
+    return this.wallets[0];
   }
 }

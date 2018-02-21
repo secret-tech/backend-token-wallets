@@ -35,6 +35,8 @@ export class DashboardApplication {
    * @param user
    */
   async balancesFor(user: User, walletAddress: string): Promise<any> {
+    walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
+
     this.logger.debug('Get balances for', user.email, walletAddress);
 
     const wallet = user.getWalletByAddress(walletAddress);
