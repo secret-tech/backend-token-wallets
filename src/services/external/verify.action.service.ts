@@ -22,6 +22,7 @@ export enum Verifications {
   USER_SIGNUP = 'user_signup',
   USER_SIGNIN = 'user_signin',
   USER_CHANGE_PASSWORD = 'user_change_password',
+  USER_CHANGE_PAYMENT_PASSWORD = 'user_change_payment_password',
   USER_RESET_PASSWORD = 'user_reset_password',
   USER_ENABLE_GOOGLE_AUTH = 'user_enable_google_auth',
   USER_DISABLE_GOOGLE_AUTH = 'user_disable_google_auth',
@@ -36,6 +37,7 @@ export function getAllVerifications() {
     Verifications.USER_SIGNUP,
     Verifications.USER_SIGNIN,
     Verifications.USER_CHANGE_PASSWORD,
+    Verifications.USER_CHANGE_PAYMENT_PASSWORD,
     Verifications.USER_RESET_PASSWORD,
     Verifications.USER_ENABLE_GOOGLE_AUTH,
     Verifications.USER_DISABLE_GOOGLE_AUTH,
@@ -47,6 +49,7 @@ export function getAllAllowedVerifications() {
   return [
     Verifications.USER_SIGNIN,
     Verifications.USER_CHANGE_PASSWORD,
+    Verifications.USER_CHANGE_PAYMENT_PASSWORD,
     Verifications.TRANSACTION_SEND
   ];
 }

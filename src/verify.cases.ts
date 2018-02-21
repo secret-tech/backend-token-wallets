@@ -5,6 +5,7 @@ import initiateSignUpTemplate from './resources/emails/1_initiate_signup';
 import initiateSignInCodeTemplate from './resources/emails/3_initiate_signin_code';
 import initiatePasswordResetTemplate from './resources/emails/6_initiate_password_reset_code';
 import initiatePasswordChangeTemplate from './resources/emails/27_initiate_password_change_code';
+import initiatePaymentPasswordChangeTemplate from './resources/emails/27_initiate_pay_password_change_code';
 import initiateChangeVerificationsTemplate from './resources/emails/29_initiate_change_verify_code';
 import initiateTransactionTemplate from './resources/emails/12_initiate_transaction_code';
 
@@ -31,6 +32,9 @@ function buildVerificationInitiate(verify: VerificationInitiateContext, context:
   switch (verify.getScope()) {
 
     case Verifications.USER_SIGNIN:
+    // no break
+
+    case Verifications.USER_CHANGE_PAYMENT_PASSWORD:
     // no break
 
     case Verifications.USER_RESET_PASSWORD:
@@ -84,6 +88,14 @@ export function buildScopeEmailVerificationInitiate(verify: VerificationInitiate
         to: context.user.email,
         subject: 'Login Verification Code',
         body: initiateSignInCodeTemplate(context.user.name, new Date().toUTCString(), context.ip)
+      });
+
+    case Verifications.USER_CHANGE_PAYMENT_PASSWORD:
+
+      return verify.setEmail({
+        to: context.user.email,
+        subject: 'Here’s the Code to Change Your Payment Password',
+        body: initiatePaymentPasswordChangeTemplate(context.user.name)
       });
 
     case Verifications.USER_CHANGE_PASSWORD:

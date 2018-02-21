@@ -3,6 +3,9 @@ import { Token } from './token';
 
 export class Wallet {
   @Column()
+  index: number;
+
+  @Column()
   ticker: string;
 
   @Column()
@@ -12,26 +15,19 @@ export class Wallet {
   balance: string;
 
   @Column()
-  securityKey: string;
-
-  @Column()
-  salt: string;
-
-  @Column()
-  mnemonic: string;
-
-  @Column()
   tokens: Token[];
+
+  @Column()
+  createdAt: number;
 
   static createWallet(data: any) {
     const wallet = new Wallet();
-    wallet.securityKey = data.securityKey;
+    wallet.index = -1;
     wallet.ticker = data.ticker;
     wallet.address = data.address;
     wallet.balance = data.balance || 0;
-    wallet.salt = data.salt;
-    wallet.mnemonic = data.mnemonic;
     wallet.tokens = data.tokens || [];
+    wallet.createdAt = ~~(+new Date() / 1000);
     return wallet;
   }
 

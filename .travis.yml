@@ -5,8 +5,9 @@ services:
 - docker
 cache:
   directories:
-  - node_modules
+  - $HOME/build/JincorTech/backend-token-wallets/node_modules
   - $HOME/.npm
+  - node_modules
 install:
 - npm install
 - docker-compose -f docker-compose.test.yml build --no-cache api
@@ -16,7 +17,7 @@ after_success:
 - npm run build
 - chmod ugo+x ./build.sh
 - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [ "$TRAVIS_BRANCH"
-  == "dev" ]; then echo "stage"; else echo "dev-$(git rev-parse --short HEAD)"; fi`
+  == "develop" ]; then echo "stage"; else echo "dev-$(git rev-parse --short HEAD)"; fi`
 - "./build.sh $TAG"
 notifications:
   slack:

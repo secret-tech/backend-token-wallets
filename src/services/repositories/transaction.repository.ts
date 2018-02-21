@@ -24,7 +24,7 @@ interface ExtendedTransaction extends Transaction {
  */
 export interface TransactionRepositoryInterface {
   save(tx: Transaction): Promise<Transaction>;
-  getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[]): Promise<ExtendedTransaction[]>;
+  getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[], limit: number): Promise<ExtendedTransaction[]>;
   getByHash(transactionHash: string): Promise<Transaction>;
   getByVerificationId(verificationId: string): Promise<Transaction>;
 }
@@ -56,7 +56,7 @@ export class TransactionRepository implements TransactionRepositoryInterface {
    * @param statuses
    * @param types
    */
-  async getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[]): Promise<ExtendedTransaction[]> {
+  async getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[], limit: number): Promise<ExtendedTransaction[]> {
     const data = await getMongoManager().createEntityCursor(Transaction, {
       $and: [
         {
@@ -81,6 +81,7 @@ export class TransactionRepository implements TransactionRepositoryInterface {
         }
       ]
     })
+    .limit(Math.max(limit, 1))
     .sort({
       timestamp: -1
     }).toArray() as ExtendedTransaction[];

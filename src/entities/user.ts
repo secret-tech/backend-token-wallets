@@ -5,6 +5,7 @@ import { Wallet } from './wallet';
 import { base64encode } from '../helpers/helpers';
 import { Preferences, Notifications } from './preferences';
 import { Verifications, VerifyMethod } from '../services/external/verify.action.service';
+import { WalletNotFound } from '../exceptions';
 
 @Entity()
 @Index('user_email', () => ({
@@ -41,6 +42,18 @@ export class User {
   @Column()
   source: any;
 
+  @Column()
+  securityKey: string;
+
+  @Column()
+  recoveryKey: string;
+
+  @Column()
+  salt: string;
+
+  @Column()
+  mnemonic: string;
+
   @Column(type => Wallet)
   wallets: Wallet[];
 
@@ -49,6 +62,10 @@ export class User {
 
   static createUser(data: any) {
     const user = new User();
+    user.securityKey = data.securityKey;
+    user.recoveryKey = data.recoveryKey;
+    user.salt = data.salt;
+    user.mnemonic = data.mnemonic;
     user.wallets = data.wallets || [];
     user.email = data.email;
     user.name = data.name;
@@ -64,10 +81,19 @@ export class User {
 
   addWallet(wallet: Wallet) {
     this.wallets = this.wallets || [];
-    if (!this.wallets.filter(w => w.ticker.toLowerCase() !== wallet.ticker.toLowerCase() &&
-      w.address.toLowerCase() !== wallet.address.toLowerCase()).length) {
+    if (!this.getWalletByAddress(wallet.address)) {
       this.wallets.push(wallet);
     }
+  }
+
+  getWalletByAddress(address: string): Wallet {
+    return this.wallets.filter(w => w.address.toLowerCase() === address.toLowerCase()).pop();
+  }
+
+  getNextWalletIndex(): number {
+    let max = -1;
+    this.wallets.forEach(w => max = Math.max(max, w.index));
+    return max + 1;
   }
 
   isNotificationEnabled(notification: Notifications): boolean {
@@ -80,5 +106,13 @@ export class User {
     return !this.preferences || !this.preferences.verifications ||
       this.preferences.verifications[verification] ||
       this.preferences.verifications[verification] === undefined;
+  }
+
+  getSingleWalletOrThrowError(): Wallet {
+    if (this.wallets.length !== 1) {
+      throw new WalletNotFound('Single wallet cant be found, you should obviously specified a wallet address');
+    }
+
+    return this.wallets[0];
   }
 }

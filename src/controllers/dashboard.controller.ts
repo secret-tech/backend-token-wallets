@@ -30,10 +30,15 @@ export class DashboardController {
    * Get main dashboard data
    */
   @httpGet(
-    '/'
+    '/',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        walletAddress: ethereumAddressValidator.optional()
+      }), req.query, res, next);
+    }
   )
   async dashboard(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.dashboardApp.balancesFor(req.app.locals.user));
+    res.json(await this.dashboardApp.balancesFor(req.app.locals.user, req.query.walletAddress));
   }
 
   /**
@@ -57,10 +62,15 @@ export class DashboardController {
    * Get transaction history
    */
   @httpGet(
-    '/transactions'
+    '/transactions',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        walletAddress: ethereumAddressValidator.optional()
+      }), req.query, res, next);
+    }
   )
   async transactionHistory(req: AuthenticatedRequest & Request, res: Response, next: NextFunction): Promise<void> {
-    res.json(await this.transactionApp.transactionHistory(req.app.locals.user));
+    res.json(await this.transactionApp.transactionHistory(req.app.locals.user, req.query.walletAddress));
   }
 
   /**
@@ -95,10 +105,11 @@ export class DashboardController {
     '/transaction/initiate',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
+        from: ethereumAddressValidator.optional(),
         to: ethereumAddressValidator.required(),
         type: Joi.string().valid('eth_transfer', 'erc20_transfer').required(),
         contractAddress: ethereumAddressValidator.optional(),
-        amount: Joi.number().required().min(1e-10),
+        amount: Joi.alternatives([Joi.number().min(1e-6), Joi.string().regex(/(^[\d]+\.?[\d]*$)|(^[\d]*\.?[\d]+$)/)]).required(),
         gas: Joi.string().optional(),
         gasPrice: Joi.string().optional(),
         paymentPassword: Joi.string().required()
@@ -109,6 +120,7 @@ export class DashboardController {
     res.json({
       verification: await this.transactionApp.transactionSendInitiate(
         req.app.locals.user, req.body.paymentPassword, {
+          from: req.body.from,
           to: req.body.to,
           type: req.body.type,
           contractAddress: req.body.contractAddress,
