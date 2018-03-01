@@ -109,7 +109,7 @@ export class UserAccountApplication {
         pubkey: mscRecoveryKey.encrypt(recoveryKey.pubkey).toString('base64'),
         msg: mscRecoveryKey.encrypt(recoveryKey.msg).toString('base64')
       });
-      user.securityKey = JSON.stringify(getUserMasterKey(msc, paymentPassword));
+      user.securityKey = getUserMasterKey(msc, paymentPassword);
       user.salt = encryptText(msc, salt);
       user.mnemonic = encryptText(msc, mnemonic);
     }
