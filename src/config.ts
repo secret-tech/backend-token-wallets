@@ -14,6 +14,10 @@ const {
   APP_API_PREFIX_URL,
   APP_FRONTEND_PREFIX_URL,
 
+  EMAIL_TEMPLATE_DOMAIN,
+  EMAIL_TEMPLATE_FROM_GENERAL,
+  EMAIL_TEMPLATE_FROM_REFERRAL,
+
   THROTTLER_WHITE_LIST,
   THROTTLER_INTERVAL,
   THROTTLER_MAX,
@@ -107,10 +111,10 @@ export default {
     authPassword: METRICS_AUTH_PASSWORD || 'metrics'
   },
   email: {
-    domain: 'jincor.com',
+    domain: EMAIL_TEMPLATE_DOMAIN || 'jincor.com',
     from: {
-      general: 'noreply@jincor.com',
-      referral: 'partners@jincor.com'
+      general: EMAIL_TEMPLATE_FROM_GENERAL || 'noreply@jincor.com',
+      referral: EMAIL_TEMPLATE_FROM_REFERRAL || 'partners@jincor.com'
     }
   },
   contracts: {

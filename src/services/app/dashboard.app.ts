@@ -37,7 +37,7 @@ export class DashboardApplication {
   async balancesFor(user: User, walletAddress: string): Promise<any> {
     walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
 
-    this.logger.debug('Get balances for', user.email, walletAddress);
+    this.logger.debug('[balancesFor]', { meta: { email: user.email, walletAddress } });
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {
@@ -70,9 +70,9 @@ export class DashboardApplication {
   getErc20TokenInfo(contractAddress: string): Promise<any> {
     contractAddress = toEthChecksumAddress(contractAddress);
 
-    this.logger.debug('Request token info for', contractAddress);
+    this.logger.debug('[getErc20TokenInfo]', { meta: { contractAddress } });
 
-    return dashboardCache.run('erc20info' + contractAddress, async() => {
+    return dashboardCache.run('erc20info' + contractAddress, async () => {
       const regToken = await this.tokensRepository.getByContractAddress(contractAddress);
       if (regToken) {
         return regToken;

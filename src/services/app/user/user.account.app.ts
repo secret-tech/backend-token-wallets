@@ -25,7 +25,7 @@ import { User } from '../../../entities/user';
 import { VerifiedToken } from '../../../entities/verified.token';
 import * as transformers from '../transformers';
 import { generateMnemonic, MasterKeySecret, getUserMasterKey, encryptText, getRecoveryMasterKey, getSha256Hash, decryptTextByUserMasterKey } from '../../crypto';
-import { Logger } from '../../../logger';
+import { Logger, SubLogger } from '../../../logger';
 import { UserRepositoryType, UserRepositoryInterface } from '../../repositories/user.repository';
 import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface, RegisteredTokenScope } from '../../repositories/registered.tokens.repository';
 import { buildScopeEmailVerificationInitiate, buildScopeGoogleAuthVerificationInitiate } from '../../../verify.cases';
@@ -66,8 +66,8 @@ export class UserAccountApplication {
     );
   }
 
-  private async initiateCreateAndReturnUser(user: User, initiateVerification: VerificationInitiateContext) {
-    this.logger.debug('Initiate verification for created user', user.email);
+  private async initiateCreateAndReturnUser(logger: SubLogger, user: User, initiateVerification: VerificationInitiateContext) {
+    logger.debug('Initiate verification');
 
     const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
       userEmail: user.email
@@ -76,8 +76,8 @@ export class UserAccountApplication {
     return transformers.transformCreatedUser(user, verifyInitiated);
   }
 
-  private createNewWallet(user: User, paymentPassword: string) {
-    this.logger.debug('Create new wallet for', user.email);
+  private createNewWallet(logger: SubLogger, user: User, paymentPassword: string) {
+    logger.debug('Create new wallet');
 
     // should be created every time for fresh master key
     const msc = new MasterKeySecret();
@@ -86,7 +86,7 @@ export class UserAccountApplication {
     let salt = bcrypt.genSaltSync();
 
     if (user.securityKey && user.wallets.length) {
-      this.logger.debug('Derive new wallet for', user.email);
+      logger.debug('Derive new wallet');
 
       mnemonic = decryptTextByUserMasterKey(msc, user.mnemonic, paymentPassword, user.securityKey);
       if (!mnemonic) {
@@ -98,13 +98,13 @@ export class UserAccountApplication {
         throw new IncorrectMnemonic('Incorrect payment password, invalid address');
       }
     } else {
-      this.logger.debug('First creation of wallet for', user.email);
+      logger.debug('First creation of wallet');
 
       const mscRecoveryKey = new MasterKeySecret();
       mscRecoveryKey.key = Buffer.from(config.crypto.globalKey, 'hex');
 
       const recoveryKey = getRecoveryMasterKey(msc);
-      user.recoveryKey =  JSON.stringify({
+      user.recoveryKey = JSON.stringify({
         mac: mscRecoveryKey.encrypt(recoveryKey.mac).toString('base64'),
         pubkey: mscRecoveryKey.encrypt(recoveryKey.pubkey).toString('base64'),
         msg: mscRecoveryKey.encrypt(recoveryKey.msg).toString('base64')
@@ -155,13 +155,15 @@ export class UserAccountApplication {
 
     if (existingUser) {
       if (!existingUser.isVerified && bcrypt.compareSync(userData.password, existingUser.passwordHash)) {
-        return this.initiateCreateAndReturnUser(existingUser, initiateVerification);
+        return this.initiateCreateAndReturnUser(this.logger.sub({ email }, '[create] '), existingUser, initiateVerification);
       } else {
         throw new UserExists('User already exists');
       }
     }
 
-    this.logger.debug('Create and save a new user', userData.email);
+    const logger = this.logger.sub({ email }, '[create] ');
+
+    logger.debug('Create and save a new user');
 
     const user = User.createUser({
       email,
@@ -171,17 +173,17 @@ export class UserAccountApplication {
     });
     user.passwordHash = bcrypt.hashSync(userData.password);
 
-    this.createNewWallet(user, userData.paymentPassword);
+    this.createNewWallet(logger, user, userData.paymentPassword);
 
-    this.logger.debug('Save user', user.email);
+    logger.debug('Save user');
 
     await this.userRepository.save(user);
 
-    return this.initiateCreateAndReturnUser(user, initiateVerification);
+    return this.initiateCreateAndReturnUser(logger, user, initiateVerification);
   }
 
-  private async addGlobalRegisteredTokens(user: User, wallet: Wallet) {
-    this.logger.debug('Fill known global tokens and set verified for', user.email, wallet.address);
+  private async addGlobalRegisteredTokens(logger: SubLogger, user: User, wallet: Wallet) {
+    logger.debug('Fill known global tokens and set verified');
 
     const registeredTokens = await this.tokensRepository.getAllByScope(RegisteredTokenScope.Global);
 
@@ -207,26 +209,26 @@ export class UserAccountApplication {
         recoveryFileName.slice(-2)
       )
     ).catch(() => { /* skip */ })
-    .then(() => {
-      return writeFilePromised(
-        join(
-          config.crypto.recoveryFolder,
-          recoveryFileName.slice(-2),
-          recoveryFileName
-        ),
-        JSON.stringify(recoveryKey)
-      );
-    });
+      .then(() => {
+        return writeFilePromised(
+          join(
+            config.crypto.recoveryFolder,
+            recoveryFileName.slice(-2),
+            recoveryFileName
+          ),
+          JSON.stringify(recoveryKey)
+        );
+      });
   }
 
-  private async activateUserAndGetNewWallets(user: User): Promise<any[]> {
-    this.logger.debug('Save verified user state', user.email);
+  private async activateUserAndGetNewWallets(logger: SubLogger, user: User): Promise<any[]> {
+    logger.debug('Save verified user state');
 
     user.isVerified = true;
 
     await this.userRepository.save(user);
 
-    this.logger.debug('Prepare response wallets for', user.email);
+    logger.debug('Prepare response wallets');
 
     return [{
       ticker: 'ETH',
@@ -241,7 +243,7 @@ export class UserAccountApplication {
    * @param activationData
    */
   async activate(verify: VerificationInput): Promise<ActivationResult> {
-    this.logger.debug('Verify and activate user');
+    this.logger.debug('[activate]');
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_SIGNUP, verify.verification);
 
@@ -256,11 +258,13 @@ export class UserAccountApplication {
       throw new UserExists('User already verified');
     }
 
-    this.logger.debug('Register new user in auth service', verifyPayload.userEmail);
+    const logger = this.logger.sub({ email: user.email }, '[activate] ');
+
+    logger.debug('Register new user in auth service');
 
     await this.authClient.createUser(transformers.transformUserForAuth(user));
 
-    this.logger.debug('Get auth token for activated user', user.email);
+    logger.debug('Get auth token from auth service');
 
     const loginResult = await this.authClient.loginUser({
       login: user.email,
@@ -268,10 +272,10 @@ export class UserAccountApplication {
       deviceId: 'device'
     });
 
-    await this.addGlobalRegisteredTokens(user, user.wallets[0]);
-    const newWallets = await this.activateUserAndGetNewWallets(user);
+    await this.addGlobalRegisteredTokens(logger, user, user.wallets[0]);
+    const newWallets = await this.activateUserAndGetNewWallets(logger, user);
 
-    this.logger.debug('Save verified token for activated user', user.email);
+    logger.debug('Save verified token');
 
     const token = VerifiedToken.createVerifiedToken(user, loginResult.accessToken);
     await getConnection().getMongoRepository(VerifiedToken).save(token);
@@ -282,7 +286,7 @@ export class UserAccountApplication {
       subject: 'You are confirmed your account',
       text: successSignUpTemplate(user.name)
     });
-console.log('>>>>>>>>', user);
+
     return {
       accessToken: token.token,
       wallets: newWallets
@@ -312,7 +316,9 @@ console.log('>>>>>>>>', user);
       throw new InvalidPassword('Incorrect password');
     }
 
-    this.logger.debug('Login in auth service', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[initiateLogin] ');
+
+    logger.debug('Login in auth service');
 
     const tokenData = await this.authClient.loginUser({
       login: user.email,
@@ -320,7 +326,7 @@ console.log('>>>>>>>>', user);
       deviceId: 'device'
     });
 
-    this.logger.debug('Initiate login', user.email);
+    logger.debug('Initiate verification');
 
     const initiateVerification = this.newInitiateVerification(Verifications.USER_SIGNIN, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -342,7 +348,7 @@ console.log('>>>>>>>>', user);
 
     const token = VerifiedToken.createNotVerifiedToken(user, tokenData.accessToken);
 
-    this.logger.debug('Save login user verification token', user.email);
+    logger.debug('Save verified token');
 
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
@@ -360,7 +366,7 @@ console.log('>>>>>>>>', user);
    * @return promise
    */
   async verifyLogin(verify: VerificationInput): Promise<VerifyLoginResult> {
-    this.logger.debug('Verify user login');
+    this.logger.debug('[verifyLogin]');
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_SIGNIN, verify.verification);
 
@@ -372,7 +378,9 @@ console.log('>>>>>>>>', user);
       throw new TokenNotFound('Access token is not found for current user');
     }
 
-    this.logger.debug('Save verified login token', verifyPayload.userEmail);
+    const logger = this.logger.sub({ email: verifyPayload.userEmail }, '[verifyLogin] ');
+
+    logger.debug('Save verified login token', verifyPayload.userEmail);
 
     token.makeVerified();
 
@@ -402,8 +410,8 @@ console.log('>>>>>>>>', user);
    * @param user
    * @param scope
    */
-  private async initiateGoogleAuthVerification(user: User, scope: Verifications): Promise<InitiatedVerification> {
-    this.logger.debug('Initiate attempt to change GoogleAuth', user.email, scope);
+  private async initiateGoogleAuthVerification(logger: SubLogger, user: User, scope: Verifications): Promise<InitiatedVerification> {
+    logger.debug('Initiate attempt to change GoogleAuth');
 
     const { verifyInitiated } = await this.verifyAction.initiate(this.newInitiateVerification(scope, user.email), {
       userEmail: user.email
@@ -418,8 +426,8 @@ console.log('>>>>>>>>', user);
    * @param scope
    * @param verify
    */
-  private async verifyAndToggleGoogleAuth(user: User, scope: Verifications, verify: VerificationInput): Promise<any> {
-    this.logger.debug('Verify attempt to change GoogleAuth', user.email, user.defaultVerificationMethod);
+  private async verifyAndToggleGoogleAuth(logger: SubLogger, user: User, scope: Verifications, verify: VerificationInput): Promise<any> {
+    logger.debug('Verify attempt to change GoogleAuth');
 
     const { verifyPayload } = await this.verifyAction.verify(scope, verify.verification, {
       removeSecret: scope === Verifications.USER_DISABLE_GOOGLE_AUTH
@@ -428,7 +436,7 @@ console.log('>>>>>>>>', user);
     user.defaultVerificationMethod = scope === Verifications.USER_DISABLE_GOOGLE_AUTH ?
       VerifyMethod.EMAIL : VerifyMethod.AUTHENTICATOR;
 
-    this.logger.debug('Save state GoogleAuth', user.email, user.defaultVerificationMethod);
+    logger.debug('Save state GoogleAuth');
 
     await this.userRepository.save(user);
 
@@ -445,7 +453,9 @@ console.log('>>>>>>>>', user);
     }
 
     return {
-      verification: await this.initiateGoogleAuthVerification(user, Verifications.USER_ENABLE_GOOGLE_AUTH)
+      verification: await this.initiateGoogleAuthVerification(this.logger.sub({
+        email: user.email
+      }, '[initiateEnableGoogleAuth] '), user, Verifications.USER_ENABLE_GOOGLE_AUTH)
     };
   }
 
@@ -460,7 +470,9 @@ console.log('>>>>>>>>', user);
     }
 
     return {
-      enabled: await this.verifyAndToggleGoogleAuth(user, Verifications.USER_ENABLE_GOOGLE_AUTH, verify)
+      enabled: await this.verifyAndToggleGoogleAuth(this.logger.sub({
+        email: user.email
+      }, '[verifyEnableGoogleAuth] '), user, Verifications.USER_ENABLE_GOOGLE_AUTH, verify)
     };
   }
 
@@ -474,7 +486,9 @@ console.log('>>>>>>>>', user);
     }
 
     return {
-      verification: await this.initiateGoogleAuthVerification(user, Verifications.USER_DISABLE_GOOGLE_AUTH)
+      verification: await this.initiateGoogleAuthVerification(this.logger.sub({
+        email: user.email
+      }, '[initiateDisableGoogleAuth] '), user, Verifications.USER_DISABLE_GOOGLE_AUTH)
     };
   }
 
@@ -489,7 +503,9 @@ console.log('>>>>>>>>', user);
     }
 
     return {
-      enabled: await this.verifyAndToggleGoogleAuth(user, Verifications.USER_DISABLE_GOOGLE_AUTH, verify)
+      enabled: await this.verifyAndToggleGoogleAuth(this.logger.sub({
+        email: user.email
+      }, '[verifyDisableGoogleAuth] '), user, Verifications.USER_DISABLE_GOOGLE_AUTH, verify)
     };
   }
 
@@ -498,12 +514,13 @@ console.log('>>>>>>>>', user);
    * @param user
    */
   async setNotifications(user: User, notifications: BooleanState): Promise<any> {
-    this.logger.debug('Set disabled notifications for', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[setNotifications] ');
+    logger.debug('Set notifications');
 
     user.preferences = user.preferences || new Preferences();
     user.preferences.setNotifications(notifications);
 
-    this.logger.debug('Save user notifications', user.email, notifications);
+    logger.debug('Save user notifications', { notifications: user.preferences.notifications });
 
     await this.userRepository.save(user);
 
@@ -517,7 +534,7 @@ console.log('>>>>>>>>', user);
    * @param user
    */
   async initiateSetVerifications(user: User, verifications: BooleanState): Promise<any> {
-    this.logger.debug('Initiate change verifications', user.email);
+    this.logger.debug('[initiateSetVerifications]', { meta: { email: user.email } });
 
     const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_VERIFICATIONS, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -532,7 +549,7 @@ console.log('>>>>>>>>', user);
     });
 
     return {
-        verification: verifyInitiated
+      verification: verifyInitiated
     };
   }
 
@@ -542,14 +559,16 @@ console.log('>>>>>>>>', user);
    * @param params
    */
   async verifySetVerifications(user: User, verify: VerificationInput): Promise<any> {
-    this.logger.debug('Verify change verifications', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[verifySetVerifications] ');
+
+    logger.debug('Verify');
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_VERIFICATIONS, verify.verification);
 
     user.preferences = user.preferences || new Preferences();
     user.preferences.setVerifications(verifyPayload.verifications);
 
-    this.logger.debug('Save user verifications', user.email, verifyPayload.verifications);
+    logger.debug('Save user verifications', { verifications: user.preferences.verifications });
 
     await this.userRepository.save(user);
 
@@ -565,11 +584,14 @@ console.log('>>>>>>>>', user);
    * @param paymentPassword
    */
   async createAndAddNewWallet(user: User, type: string, paymentPassword: string): Promise<any> {
-    this.logger.debug('Create and add new wallet', user.email, type);
+    const logger = this.logger.sub({ email: user.email, type }, '[createAndAddNewWallet] ');
+    logger.debug('Create and add');
 
-    const newWallet = await this.createNewWallet(user, paymentPassword);
+    const newWallet = await this.createNewWallet(logger, user, paymentPassword);
 
-    this.logger.debug('Save new wallet for user', user.email);
+    this.addGlobalRegisteredTokens(logger.addMeta({ walletAddress: newWallet.address }), user, newWallet);
+
+    logger.debug('Save new wallet');
 
     await this.userRepository.save(user);
 

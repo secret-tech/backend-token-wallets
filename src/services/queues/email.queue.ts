@@ -32,7 +32,9 @@ export class EmailQueue implements EmailQueueInterface {
    *
    */
   private initEmailQueue() {
-    this.logger.debug('Init email queue');
+    const logger = this.logger.sub(null, '[initEmailQueue] ');
+
+    logger.debug('[initEmailQueue]');
 
     this.queueWrapper = new Bull('email_queue', config.redis.url);
     this.queueWrapper.process((job) => {
@@ -40,7 +42,7 @@ export class EmailQueue implements EmailQueueInterface {
     });
 
     this.queueWrapper.on('error', (error) => {
-      this.logger.error(error);
+      logger.error(error);
     });
   }
 
@@ -49,7 +51,13 @@ export class EmailQueue implements EmailQueueInterface {
    * @param job
    */
   private async process(job: Bull.Job): Promise<boolean> {
-    this.logger.debug('Send email', job.data.sender, job.data.recipient, job.data.subject);
+    this.logger.debug('[process] Send email', {
+      meta: {
+        sender: job.data.sender,
+        recipient: job.data.recipient,
+        subject: job.data.subject
+      }
+    });
 
     await this.emailService.send(
       job.data.sender,
@@ -65,7 +73,13 @@ export class EmailQueue implements EmailQueueInterface {
    * @param data
    */
   addJob(data: any) {
-    this.logger.debug('Push email to queue', data.sender, data.recipient, data.subject);
+    this.logger.debug('[addJob] Push email to queue', {
+      meta: {
+        sender: data.sender,
+        recipient: data.recipient,
+        subject: data.subject
+      }
+    });
 
     this.queueWrapper.add(data);
   }

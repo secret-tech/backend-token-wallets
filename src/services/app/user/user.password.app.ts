@@ -62,7 +62,9 @@ export class UserPasswordApplication {
       throw new InvalidPassword('Invalid password');
     }
 
-    this.logger.debug('Initiate changing password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[initiateChangePassword] ');
+
+    logger.debug('Initiate verification');
 
     const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_PASSWORD, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -75,6 +77,8 @@ export class UserPasswordApplication {
     if (!user.isVerificationEnabled(Verifications.USER_CHANGE_PASSWORD)) {
       initiateVerification.setMethod(VerifyMethod.INLINE);
     }
+
+    logger.debug('Initiate verify action');
 
     const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
       newPassword: bcrypt.hashSync(params.newPassword)
@@ -92,11 +96,12 @@ export class UserPasswordApplication {
    */
   async verifyChangePassword(user: User, verify: VerificationInput): Promise<AccessTokenResponse> {
 
-    this.logger.debug('Verify atempt to change password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[verifyChangePassword] ');
+    logger.debug('Verify attempt');
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_PASSWORD, verify.verification);
 
-    this.logger.debug('Save changed password', user.email);
+    logger.debug('Save password');
 
     user.passwordHash = verifyPayload.newPassword;
 
@@ -111,7 +116,7 @@ export class UserPasswordApplication {
       });
     }
 
-    this.logger.debug('Recreate user with changed password in auth', user.email);
+    logger.debug('Recreate user in auth');
 
     await this.authClient.createUser({
       email: user.email,
@@ -120,7 +125,7 @@ export class UserPasswordApplication {
       sub: user.id.toString()
     });
 
-    this.logger.debug('Reauth user to get auth token after changing password', user.email);
+    logger.debug('Reauth user to get auth token');
 
     const loginResult = await this.authClient.loginUser({
       login: user.email,
@@ -130,7 +135,7 @@ export class UserPasswordApplication {
 
     const token = VerifiedToken.createVerifiedToken(user, loginResult.accessToken);
 
-    this.logger.debug('Save verified token with changed password', user.email);
+    logger.debug('Save verified token');
 
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
@@ -153,7 +158,7 @@ export class UserPasswordApplication {
       throw new UserNotFound('User is not found');
     }
 
-    this.logger.debug('Initiate reset password', user.email);
+    this.logger.debug('[initiateResetPassword] Initiate reset password', { meta: { email: user.email } });
 
     const initiateVerification = this.newInitiateVerification(Verifications.USER_RESET_PASSWORD, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -188,7 +193,7 @@ export class UserPasswordApplication {
       throw new UserNotFound('User is not found');
     }
 
-    this.logger.debug('Verify attempt to reset password', user.email);
+    this.logger.debug('[verifyResetPassword] Verify attempt to reset password', { meta: { email: user.email } });
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_RESET_PASSWORD, params.verification);
 
@@ -222,12 +227,14 @@ export class UserPasswordApplication {
       throw new UserNotFound('User is not found');
     }
 
-    this.logger.debug('Save user with new reset password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[resetPasswordEnter] ');
+
+    logger.debug('Save user with new reset password');
 
     user.passwordHash = bcrypt.hashSync(params.password);
     await this.userRepository.save(user);
 
-    this.logger.debug('Reauth user to get new auth token after reset password', user.email);
+    logger.debug('Reauth user to get new auth token after reset password');
 
     await this.authClient.createUser({
       email: user.email,
@@ -256,7 +263,8 @@ export class UserPasswordApplication {
    * @param params
    */
   async initiateChangePaymentPassword(user: User, params: any): Promise<BaseInitiateResult> {
-    this.logger.debug('Initiate changing payment password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[initiateChangePaymentPassword] ');
+    logger.debug('Initiate changing payment password');
 
     const msc = new MasterKeySecret();
 
@@ -264,7 +272,7 @@ export class UserPasswordApplication {
       throw new InvalidPassword('Invalid payment password');
     }
 
-    this.logger.debug('Prepare new security key', user.email);
+    logger.debug('Prepare new security key');
 
     decryptUserMasterKey(msc, user.securityKey, params.oldPaymentPassword);
     const newSecurityKey = getUserMasterKey(msc, params.newPaymentPassword);
@@ -281,7 +289,7 @@ export class UserPasswordApplication {
       initiateVerification.setMethod(VerifyMethod.INLINE);
     }
 
-    this.logger.debug('Initiate verification for changing payment password', user.email);
+    logger.debug('Initiate verification');
 
     const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
       securityKey: newSecurityKey
@@ -298,12 +306,13 @@ export class UserPasswordApplication {
    * @param params
    */
   async verifyChangePaymentPassword(user: User, verify: VerificationInput): Promise<any> {
+    const logger = this.logger.sub({ email: user.email }, '[verifyChangePaymentPassword] ');
 
-    this.logger.debug('Verify atempt to change payment password', user.email);
+    logger.debug('Verify attempt to change payment password');
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_PAYMENT_PASSWORD, verify.verification);
 
-    this.logger.debug('Save changed payment password', user.email);
+    logger.debug('Save new payment password');
 
     user.securityKey = verifyPayload.securityKey;
 

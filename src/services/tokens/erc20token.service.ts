@@ -40,7 +40,7 @@ export class Erc20TokenService {
   }
 
   private catchInfoError(name: string, err: any) {
-    this.logger.warn('Cannot get info for', name, this.contractAddress, err);
+    this.logger.warn('[catchInfoError] Cannot get info for', name, { meta: { contractAddress: this.contractAddress, error: err } });
     return '';
   }
 

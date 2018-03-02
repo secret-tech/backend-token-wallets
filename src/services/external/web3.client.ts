@@ -41,7 +41,7 @@ export class Web3Client implements Web3ClientInterface {
         const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
 
         webSocketProvider.connection.onclose = () => {
-          this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
+          this.logger.info('Web3 socket connection closed');
           this.onWsClose();
         };
 
@@ -62,7 +62,9 @@ export class Web3Client implements Web3ClientInterface {
    * @param salt
    */
   sendTransactionByAccount(input: TransactionInput, account: Account): Promise<string> {
-    this.logger.debug('SendTransactionByMnemonic', input.amount, input.from, input.to, input.gas, input.gasPrice);
+    this.logger.debug('[sendTransactionByAccount]', {
+      meta: { amount: input.amount, from: input.from, to: input.to, gas: input.gas, gasPrice: input.gasPrice }
+    });
 
     return this.signTransactionByAccount(input, account).then(tx => {
       return this.sendSignedTransaction(tx.raw);
@@ -76,7 +78,9 @@ export class Web3Client implements Web3ClientInterface {
    * @param salt
    */
   async signTransactionByAccount(input: TransactionInput, account: Account): Promise<EncodedTransaction> {
-    this.logger.debug('signTransactionByAccount', input.amount, input.from, input.to, input.gas, input.gasPrice);
+    this.logger.debug('[signTransactionByAccount]', {
+      meta: { amount: input.amount, from: input.from, to: input.to, gas: input.gas, gasPrice: input.gasPrice }
+    });
 
     const params = {
       value: this.web3.utils.toWei(input.amount.toString()),
@@ -101,7 +105,7 @@ export class Web3Client implements Web3ClientInterface {
    * @param salt
    */
   sendSignedTransaction(rawTransaction: string): Promise<string> {
-    this.logger.debug('sendSignedTransaction');
+    this.logger.debug('[sendSignedTransaction]');
 
     return new Promise<string>((resolve, reject) => {
       this.web3.eth.sendSignedTransaction(rawTransaction)
@@ -160,10 +164,10 @@ export class Web3Client implements Web3ClientInterface {
    *
    */
   onWsClose() {
-    this.logger.error(new Date().toUTCString() + ': Web3 socket connection closed. Trying to reconnect');
+    this.logger.error('Web3 socket connection closed. Trying to reconnect');
     const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
     webSocketProvider.connection.onclose = () => {
-      this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
+      this.logger.info('Web3 socket connection closed');
       setTimeout(() => {
         this.onWsClose();
       }, config.web3.reconnectTimeout);

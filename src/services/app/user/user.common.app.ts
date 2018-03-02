@@ -68,7 +68,11 @@ export class UserCommonApplication {
   }): Promise<any> {
     walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
 
-    this.logger.debug('Register token for user', user.email, walletAddress, token.contractAddress);
+    this.logger.debug('[registerToken] Register token', {
+      meta: {
+        email: user.email, walletAddress, contractAddress: token.contractAddress
+      }
+    });
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {

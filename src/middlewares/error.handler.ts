@@ -43,9 +43,9 @@ export default function defaultExceptionHandle(err: Error, req: Request, res: Re
   }
 
   if (status >= 500) {
-    logger.error(status, err.message, err.stack);
+    logger.error(status, { error: err });
   } else {
-    logger.debug(status, err.message, err.stack);
+    logger.debug(status, { error: err });
   }
 
   res.status(status).send({

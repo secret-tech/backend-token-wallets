@@ -213,7 +213,7 @@ export function decryptUserMasterKey(msc: MasterKeySecret, base64EncMK: string, 
   msc.key = decryptAes256ctr(new Buffer(base64EncMK, 'base64'), [
     new Buffer(userPassword, 'utf-8'),
     new Buffer(config.crypto.globalKey, 'hex')
-  ]);
+  ].reverse());
 }
 
 /**

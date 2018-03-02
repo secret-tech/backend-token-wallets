@@ -245,7 +245,9 @@ export class VerifyActionService {
       throw new VerificationIsNotFound('Invalid scope');
     }
 
-    this.logger.debug('Call verify service', scope, verification.verificationId);
+    const logger = this.logger.sub({ scope, verificationId: verification.verificationId }, '[verify] ');
+
+    logger.debug('Call verify service');
 
     try {
       const verifyResult = await this.verificationClient.validateVerification(verifyAction.method, verifyAction.verificationId, {
@@ -253,7 +255,7 @@ export class VerifyActionService {
       });
 
       // without await
-      this.delAction(verification.verificationId).catch(e => this.logger.error);
+      this.delAction(verification.verificationId).catch(e => logger.error);
 
       return {
         verifyPayload: JSON.parse(verifyAction.payload),
@@ -261,7 +263,7 @@ export class VerifyActionService {
       };
     } catch (err) {
       if (!(err instanceof NotCorrectVerificationCode)) {
-        this.delAction(verification.verificationId).catch(e => this.logger.error);
+        this.delAction(verification.verificationId).catch(e => logger.error);
       }
       throw err;
     }

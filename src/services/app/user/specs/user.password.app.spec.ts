@@ -65,6 +65,13 @@ describe('User Password App', () => {
     const result = await userPassword.verifyChangePassword(user, verify as any);
 
     expect(result.accessToken).is.equal(newTokenName);
+
+    const changedVerify = await userPassword.initiateChangePassword(user, {
+      oldPassword: 'qwerQWER!@#$123456',
+      newPassword: userCredentialParams.password
+    });
+
+    expect(changedVerify.verification).is.not.empty;
   });
 
   it('should fail change password with invalid password', async () => {
@@ -134,5 +141,12 @@ describe('User Password App', () => {
     const resultData = await userPassword.verifyChangePaymentPassword(user, verifyData as any);
 
     expect(resultData.isChanged).is.true;
+
+    const verifyAgainData = await userPassword.initiateChangePaymentPassword(user, {
+      oldPaymentPassword: '32$%^QWEqwe',
+      newPaymentPassword: userPaymentPassword
+    });
+
+    expect(verifyData.verification).is.not.undefined;
   });
 });

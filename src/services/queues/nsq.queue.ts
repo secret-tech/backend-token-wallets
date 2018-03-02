@@ -17,12 +17,14 @@ export class NsqQueueWriter {
    */
   async publish(topic: string, msg: any): Promise<void> {
     return this.connect().then((writer) => {
-      this.logger.debug('Publish message to', topic);
+      const logger = this.logger.sub({ topic }, '[publish] ');
+
+      logger.debug('Publish message');
       writer.publish(topic, msg, (err) => {
         if (err) {
-          this.logger.error('Publish error', topic, err);
+          logger.error('Publish error', { error: err });
         } else {
-          this.logger.debug('Publish success', topic);
+          logger.debug('Publish success');
         }
       });
     });
@@ -32,19 +34,20 @@ export class NsqQueueWriter {
    *
    */
   private connect(): Promise<Writer> {
+    const logger = this.logger.sub(null, '[connect] ');
     return this.promiseConnection = new Promise<Writer>((resolve, reject) => {
-      this.logger.info('Connect');
+      logger.info('Start');
       const writer = new Writer(config.nsqd.host, config.nsqd.port, {
         deflate: true,
         deflateLevel: 6
       });
       writer.connect();
       writer.on('ready', () => {
-        this.logger.info('Ready');
+        logger.info('Ready');
         resolve(writer);
       });
       writer.on('closed', () => {
-        this.logger.info('Closed');
+        logger.info('Closed');
       });
     });
   }
