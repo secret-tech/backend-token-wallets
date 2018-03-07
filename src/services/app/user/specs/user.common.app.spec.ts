@@ -37,7 +37,7 @@ describe('User Common App', () => {
   });
 
   it('should register new token', async () => {
-    const token = await userCommon.registerToken(user, {
+    const token = await userCommon.registerToken(user, user.wallets[0].address, {
       contractAddress: '0xc20f363f721fe8b35cc2aafd18df7156c775d642',
       decimals: 18,
       symbol: 'TOK',

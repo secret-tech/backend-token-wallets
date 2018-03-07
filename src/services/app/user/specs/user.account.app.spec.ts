@@ -10,7 +10,7 @@ import { EncodedTransaction } from 'web3/types';
 import Contract, { DummyContract } from '../../../external/web3.contract';
 import { UserAccountApplicationType, UserAccountApplication } from '../user.account.app';
 import { VerifyActionService, VerifyActionServiceType, Verifications } from '../../../external/verify.action.service';
-import { UserExists, InvalidPassword, UserNotFound } from '../../../../exceptions';
+import { UserExists, InvalidPassword, UserNotFound, IncorrectMnemonic } from '../../../../exceptions';
 import { VerifiedToken } from '../../../../entities/verified.token';
 import { AuthClientInterface, AuthClient, AuthClientType } from '../../../external/auth.client';
 import { Notifications } from '../../../../entities/preferences';
@@ -21,6 +21,7 @@ describe('User Account App', () => {
   let user: User;
   let authMock: TypeMoq.IMock<AuthClientInterface>;
   let userAccount: UserAccountApplication;
+  const userPaymentPassword = '1q@W3e$R5';
   const existingUserParams = {
     email: 'user1@USER.COM',
     name: 'User name',
@@ -113,17 +114,34 @@ describe('User Account App', () => {
   });
 
   it('should success set verifications', async () => {
-    const userVerify = await userAccount.initiateSetVerifications(user, {
+    const verifyInit = await userAccount.initiateSetVerifications(user, {
       [Verifications.USER_CHANGE_PASSWORD]: true,
       [Verifications.USER_SIGNIN]: false
     });
 
-    expect(userVerify).is.not.empty;
+    expect(verifyInit).is.not.empty;
+    expect(verifyInit.verification.verificationId).is.not.empty;
 
-    const { verifications } = await userAccount.verifySetVerifications(user, { verification: userVerify as any });
+    const { verifications } = await userAccount.verifySetVerifications(user, { verification: verifyInit.verification });
 
     expect(verifications[Verifications.TRANSACTION_SEND]).is.true;
     expect(verifications[Verifications.USER_CHANGE_PASSWORD]).is.true;
     expect(verifications[Verifications.USER_SIGNIN]).is.false;
+  });
+
+  it('should fail to create a new wallet with invalid payment password', async () => {
+    expect(userAccount
+      .createAndAddNewWallet(user, 'ETH', 'invalid_payment_password')
+    ).to.be.rejectedWith(IncorrectMnemonic);
+  });
+
+  it('should create a new wallet', async () => {
+    const newWallet = await userAccount.createAndAddNewWallet(user, 'ETH', userPaymentPassword);
+
+    expect(newWallet.ticker).is.equal('ETH');
+
+    const refreshedUser = await getMongoRepository(User).findOne({ email: 'user1@user.com' });
+
+    expect(refreshedUser.wallets[1].address).is.equal(newWallet.address);
   });
 });

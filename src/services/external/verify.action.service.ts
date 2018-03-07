@@ -22,6 +22,7 @@ export enum Verifications {
   USER_SIGNUP = 'user_signup',
   USER_SIGNIN = 'user_signin',
   USER_CHANGE_PASSWORD = 'user_change_password',
+  USER_CHANGE_PAYMENT_PASSWORD = 'user_change_payment_password',
   USER_RESET_PASSWORD = 'user_reset_password',
   USER_ENABLE_GOOGLE_AUTH = 'user_enable_google_auth',
   USER_DISABLE_GOOGLE_AUTH = 'user_disable_google_auth',
@@ -36,6 +37,7 @@ export function getAllVerifications() {
     Verifications.USER_SIGNUP,
     Verifications.USER_SIGNIN,
     Verifications.USER_CHANGE_PASSWORD,
+    Verifications.USER_CHANGE_PAYMENT_PASSWORD,
     Verifications.USER_RESET_PASSWORD,
     Verifications.USER_ENABLE_GOOGLE_AUTH,
     Verifications.USER_DISABLE_GOOGLE_AUTH,
@@ -47,6 +49,7 @@ export function getAllAllowedVerifications() {
   return [
     Verifications.USER_SIGNIN,
     Verifications.USER_CHANGE_PASSWORD,
+    Verifications.USER_CHANGE_PAYMENT_PASSWORD,
     Verifications.TRANSACTION_SEND
   ];
 }
@@ -242,7 +245,9 @@ export class VerifyActionService {
       throw new VerificationIsNotFound('Invalid scope');
     }
 
-    this.logger.debug('Call verify service', scope, verification.verificationId);
+    const logger = this.logger.sub({ scope, verificationId: verification.verificationId }, '[verify] ');
+
+    logger.debug('Call verify service');
 
     try {
       const verifyResult = await this.verificationClient.validateVerification(verifyAction.method, verifyAction.verificationId, {
@@ -250,7 +255,7 @@ export class VerifyActionService {
       });
 
       // without await
-      this.delAction(verification.verificationId).catch(e => this.logger.error);
+      this.delAction(verification.verificationId).catch(e => logger.error);
 
       return {
         verifyPayload: JSON.parse(verifyAction.payload),
@@ -258,7 +263,7 @@ export class VerifyActionService {
       };
     } catch (err) {
       if (!(err instanceof NotCorrectVerificationCode)) {
-        this.delAction(verification.verificationId).catch(e => this.logger.error);
+        this.delAction(verification.verificationId).catch(e => logger.error);
       }
       throw err;
     }

@@ -103,7 +103,7 @@ export class Web3Event implements Web3EventInterface {
         const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
 
         webSocketProvider.connection.onclose = () => {
-          this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
+          this.logger.info('Web3 socket connection closed');
           this.onWsClose();
         };
 
@@ -129,12 +129,12 @@ export class Web3Event implements Web3EventInterface {
    *
    */
   private initDeferredTransactionsChecking() {
-    this.logger.debug('Start deferrable transaction checking');
+    this.logger.debug('[initDeferredTransactionsChecking]');
 
     const intervalExecuteMethod = () => {
       setTimeout(() => {
         this.checkTransactions()
-          .then((a) => { return a; }, (err) => { this.logger.error('Error was occurred', err); })
+          .then((a) => { return a; }, (err) => { this.logger.error('[initDeferredTransactionsChecking] Error was occurred', { error: err }); })
           .then(() => { intervalExecuteMethod(); });
       }, TRANSACTION_CHECKING_INTERVAL_TIME);
     };
@@ -176,10 +176,11 @@ export class Web3Event implements Web3EventInterface {
    *
    */
   async checkTransactions(): Promise<boolean> {
-    this.logger.debug('Check transactions in blocks');
+    const logger = this.logger.sub(null, '[checkTransactions] ');
+    logger.debug('Check transactions in blocks');
 
     if (!this.lastCheckingBlock) {
-      this.logger.debug('Get the biggest block height value from local transactions');
+      logger.debug('Get the biggest block height value from local transactions');
 
       const txWithMaxBlockHeight = await getMongoRepository(Transaction).find({
         order: {
@@ -199,13 +200,13 @@ export class Web3Event implements Web3EventInterface {
       this.lastCheckingBlock = currentBlock - 4;
     }
 
-    this.logger.debug('Check blocks from', this.lastCheckingBlock, 'to', currentBlock);
+    logger.debug('Check blocks from', this.lastCheckingBlock, 'to', currentBlock);
 
-    await processAsyncIntRangeByChunks(this.lastCheckingBlock, currentBlock, 1, CONCURRENT_BLOCK_PROCESS_COUNT, async(i) => {
+    await processAsyncIntRangeByChunks(this.lastCheckingBlock, currentBlock, 1, CONCURRENT_BLOCK_PROCESS_COUNT, async (i) => {
       const blockData: Block = await this.web3.eth.getBlock(i, true);
 
       if (!(i % 10)) {
-        this.logger.debug('Blocks processed:', i);
+        logger.debug('Blocks processed:', i);
       }
 
       if (!blockData) {
@@ -215,12 +216,12 @@ export class Web3Event implements Web3EventInterface {
       try {
         await this.processTransactionsInBlock(blockData);
       } catch (err) {
-        this.logger.error(err);
+        logger.error(err);
       }
     });
 
     this.lastCheckingBlock = currentBlock - 10;
-    this.logger.debug('Change lastCheckingBlock to', this.lastCheckingBlock);
+    logger.debug('Change lastCheckingBlock to', this.lastCheckingBlock);
 
     return true;
   }
@@ -235,7 +236,7 @@ export class Web3Event implements Web3EventInterface {
       return;
     }
 
-    this.logger.debug('Process new block headers');
+    this.logger.debug('[processNewBlockHeaders]', { meta: { blockNumber: data.number } });
 
     this.processTransactionsInBlock(await this.web3.eth.getBlock(data.hash, true));
   }
@@ -278,7 +279,7 @@ export class Web3Event implements Web3EventInterface {
 
     const transactions = this.filterTransactionByWalletAddresses(wallets, sourceTransactions);
 
-    this.logger.debug('Process transactions in block', transactions.length, 'wallets count', Object.keys(wallets).length);
+    this.logger.debug('[processTransactionsInBlock] Process transactions in block', transactions.length, 'wallets count', Object.keys(wallets).length);
 
     await processAsyncItemsByChunks(transactions || [], CONCURRENT_TRANSACTIONS_PROCESS_COUNT,
       transaction => this.processTransaction(transaction, blockData, wallets));
@@ -383,10 +384,10 @@ export class Web3Event implements Web3EventInterface {
    *
    */
   onWsClose() {
-    this.logger.error(new Date().toUTCString() + ': Web3 socket connection closed. Trying to reconnect');
+    this.logger.error('Web3 socket connection closed. Trying to reconnect');
     const webSocketProvider = new Web3.providers.WebsocketProvider(config.web3.address);
     webSocketProvider.connection.onclose = () => {
-      this.logger.info(new Date().toUTCString() + ':Web3 socket connection closed');
+      this.logger.info('Web3 socket connection closed');
       setTimeout(() => {
         this.onWsClose();
       }, config.web3.reconnectTimeout);
@@ -400,7 +401,7 @@ export class Web3Event implements Web3EventInterface {
    *
    */
   attachEvents() {
-    this.logger.debug('Attach to eth / contracts events');
+    this.logger.debug('Attach to ethereum realtime events');
 
     // process new blocks
     this.web3.eth.subscribe('newBlockHeaders')

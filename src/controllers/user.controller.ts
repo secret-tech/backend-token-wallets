@@ -121,6 +121,7 @@ export class UserController {
     'AuthMiddleware',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
+        walletAddress: ethereumAddressValidator.optional(),
         contractAddress: ethereumAddressValidator.required(),
         symbol: Joi.string().required(),
         name: Joi.string().optional(),
@@ -129,7 +130,40 @@ export class UserController {
     }
   )
   async registerErc20Token(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
-    res.json(await this.userCommonApp.registerToken(req.app.locals.user, req.body));
+    res.json(await this.userCommonApp.registerToken(req.app.locals.user, req.body.walletAddress, req.body));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPost(
+    '/me/changePaymentPassword/initiate',
+    'AuthMiddleware',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        oldPaymentPassword: Joi.string().required(),
+        newPaymentPassword: Joi.string().regex(passwordRegex).disallow(Joi.ref('oldPaymentPassword')).required()
+      }), req.body, res, next);
+    }
+  )
+  async initiateChangePaymentPassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
+    res.json(await this.userPasswordApp.initiateChangePaymentPassword(req.app.locals.user, req.body));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPost(
+    '/me/changePaymentPassword/verify',
+    'AuthMiddleware',
+    'VerificationRequiredValidation'
+  )
+  async verifyChangePaymentPassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
+    res.json(await this.userPasswordApp.verifyChangePaymentPassword(req.app.locals.user, req.body));
   }
 
   /**
@@ -321,5 +355,24 @@ export class UserController {
   )
   async setVerificationVerify(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
     res.json(await this.userAccountApp.verifySetVerifications(req.app.locals.user, req.body));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPost(
+    '/me/wallets',
+    'AuthMiddleware',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        type: Joi.string().valid('ETH').required(),
+        paymentPassword: Joi.string().required().regex(passwordRegex)
+      }), req.body, res, next);
+    }
+  )
+  async createNewWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
+    res.json(await this.userAccountApp.createAndAddNewWallet(req.app.locals.user, req.body.type, req.body.paymentPassword));
   }
 }

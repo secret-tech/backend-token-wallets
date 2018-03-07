@@ -54,7 +54,6 @@ export class AuthMiddleware extends BaseMiddleware {
 
         return next();
       } catch (e) {
-        // this.logger.error(e);
         return this.notAuthorized(res);
       }
     });

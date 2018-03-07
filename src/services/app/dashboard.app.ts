@@ -11,6 +11,7 @@ import { RegisteredTokenRepositoryType, RegisteredTokenRepositoryInterface } fro
 import { RegisteredToken } from '../../entities/registered.token';
 import { toEthChecksumAddress } from '../crypto';
 import { fromWeiToUnitValue } from '../tokens/helpers';
+import { WalletNotFound } from '../../exceptions';
 
 const CONCURRENT_GET_TOKEN_BALANCEOF: number = 2;
 
@@ -33,12 +34,17 @@ export class DashboardApplication {
    * Get balances for addr
    * @param user
    */
-  async balancesFor(user: User): Promise<any> {
-    this.logger.debug('Get balances for', user.email);
+  async balancesFor(user: User, walletAddress: string): Promise<any> {
+    walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
 
-    const wallet = user.wallets[0];
+    this.logger.debug('[balancesFor]', { meta: { email: user.email, walletAddress } });
 
-    const [ethBalance, erc20TokensBalance] = await dashboardCache.run('ubalances' + user.email, () => {
+    const wallet = user.getWalletByAddress(walletAddress);
+    if (!wallet) {
+      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+    }
+
+    const [ethBalance, erc20TokensBalance] = await dashboardCache.run('ubalances' + user.id.toString() + walletAddress, () => {
       return Promise.all([
         this.web3Client.getEthBalance(wallet.address),
 
@@ -64,9 +70,9 @@ export class DashboardApplication {
   getErc20TokenInfo(contractAddress: string): Promise<any> {
     contractAddress = toEthChecksumAddress(contractAddress);
 
-    this.logger.debug('Request token info for', contractAddress);
+    this.logger.debug('[getErc20TokenInfo]', { meta: { contractAddress } });
 
-    return dashboardCache.run('erc20info' + contractAddress, async() => {
+    return dashboardCache.run('erc20info' + contractAddress, async () => {
       const regToken = await this.tokensRepository.getByContractAddress(contractAddress);
       if (regToken) {
         return regToken;

@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify';
 import config from '../../config';
 
 import { AuthenticatedRequest } from '../../interfaces';
-import { IncorrectMnemonic, InsufficientEthBalance, VerificationIsNotFound, NotCorrectTransactionRequest } from '../../exceptions';
+import { IncorrectMnemonic, InsufficientEthBalance, VerificationIsNotFound, NotCorrectTransactionRequest, WalletNotFound } from '../../exceptions';
 import {
   TransactionRepositoryInterface,
   TransactionRepositoryType,
@@ -26,6 +26,7 @@ import { fromUnitValueToWei, fromWeiToUnitValue } from '../tokens/helpers';
 import { Token } from '../../entities/token';
 
 export interface TransactionSendData {
+  from?: string;
   to: string;
   type: string;
   amount: string;
@@ -86,10 +87,10 @@ export class TransactionApplication {
    *
    * @param user
    */
-  private getKnownUserErc20Tokens(user: User): { [k: string]: Token; } {
+  private getKnownUserErc20Tokens(user: User, wallet: Wallet): { [k: string]: Token; } {
     const knownUserTokens = {};
 
-    user.wallets[0].tokens.forEach(t => {
+    wallet.tokens.forEach(t => {
       const contractAddress = toEthChecksumAddress(t.contractAddress);
       knownUserTokens[contractAddress] = t;
       delete knownUserTokens[contractAddress].balance;
@@ -101,17 +102,27 @@ export class TransactionApplication {
   /**
    * Get transaction history
    */
-  async transactionHistory(user: User): Promise<any> {
-    this.logger.debug('Request transactions history for', user.email);
+  async transactionHistory(user: User, walletAddress: string): Promise<any> {
+    walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
 
-    return transactionsCache.run('thist' + user.id, () => {
+    this.logger.debug('[transactionHistory] Request transactions history', {
+      meta: { email: user.email, walletAddress }
+    });
 
-      const knownUserTokens = this.getKnownUserErc20Tokens(user);
+    const wallet = user.getWalletByAddress(walletAddress);
+    if (!wallet) {
+      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+    }
+
+    return transactionsCache.run('thist' + user.id.toString() + walletAddress, () => {
+
+      const knownUserTokens = this.getKnownUserErc20Tokens(user, wallet);
 
       return this.transactionRepository.getAllByWalletAndStatusIn(
-        user.wallets[0],
+        wallet,
         allStatuses(),
-        [ETHEREUM_TRANSFER, ERC20_TRANSFER]
+        [ETHEREUM_TRANSFER, ERC20_TRANSFER],
+        50 // @TODO: Customize it!
       ).then(transactions => {
         return transactions.map<any>(tx => {
           const contractAddress = tx.contractAddress ? toEthChecksumAddress(tx.contractAddress) : '';
@@ -139,19 +150,30 @@ export class TransactionApplication {
    * @param gasPrice
    * @param ethAmount
    */
-  async transactionSendInitiate(user: User, paymantPassword: string, transData: TransactionSendData): Promise<any> {
-    this.logger.debug('Initiate transaction', user.email, transData.type, transData.to);
+  async transactionSendInitiate(user: User, paymentPassword: string, transData: TransactionSendData): Promise<any> {
+    transData.from = transData.from || user.getSingleWalletOrThrowError().address;
+
+    const logger = this.logger.sub({
+      email: user.email, type: transData.type, from: transData.from, to: transData.to, amount: transData.amount
+    }, '[transactionSendInitiate] ');
+
+    logger.debug('Initiate transaction');
+
+    const wallet = user.getWalletByAddress(transData.from);
+    if (!wallet) {
+      throw new WalletNotFound('Wallet not found: ' + transData.from);
+    }
 
     const msc = new MasterKeySecret();
 
-    const mnemonic = decryptTextByUserMasterKey(msc, user.wallets[0].mnemonic, paymantPassword, user.wallets[0].securityKey);
+    const mnemonic = decryptTextByUserMasterKey(msc, user.mnemonic, paymentPassword, user.securityKey);
     if (!mnemonic) {
       throw new IncorrectMnemonic('Incorrect payment password');
     }
 
-    const salt = decryptTextByUserMasterKey(msc, user.wallets[0].salt, paymantPassword, user.wallets[0].securityKey);
-    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt);
-    if (account.address !== user.wallets[0].address) {
+    const salt = decryptTextByUserMasterKey(msc, user.salt, paymentPassword, user.securityKey);
+    const account = this.web3Client.getAccountByMnemonicAndSalt(mnemonic, salt, wallet.index);
+    if (account.address !== wallet.address) {
       throw new IncorrectMnemonic('Incorrect payment password, invalid address');
     }
 
@@ -165,14 +187,14 @@ export class TransactionApplication {
 
     let amount = ('' + transData.amount).replace(/0+$/, ''); // remove last zeroes
     if (transData.type === ERC20_TRANSFER) {
-      const token = user.wallets[0].getTokenByContractAddress(transData.contractAddress);
+      const token = wallet.getTokenByContractAddress(transData.contractAddress);
       amount = fromUnitValueToWei(amount, token && token.decimals || 0);
     }
 
     const gas = '' + Math.max(+transData.gas, 30000);
     const gasPrice = '' + (Math.max(+transData.gasPrice, 0) || await this.web3Client.getCurrentGasPrice());
     const txInput = {
-      from: user.wallets[0].address,
+      from: wallet.address,
       to: transData.to,
       amount: '' + amount,
       gas,
@@ -184,7 +206,7 @@ export class TransactionApplication {
       txCheckBalanceInput.amount = '0';
     }
 
-    this.logger.debug('Check sufficient funds', user.email, transData.type, transData.to);
+    logger.debug('Check sufficient funds');
 
     if (!(await this.web3Client.sufficientBalance(txCheckBalanceInput))) {
       throw new InsufficientEthBalance('Insufficient funds to perform this operation and pay tx fee');
@@ -192,12 +214,12 @@ export class TransactionApplication {
 
     let signedTransaction: EncodedTransaction;
     if (transData.type === ERC20_TRANSFER) {
-      this.logger.debug('Prepare to send tokens', user.email);
+      logger.debug('Prepare to send tokens');
 
       signedTransaction = await new Erc20TokenService(this.web3Client, toEthChecksumAddress(transData.contractAddress))
         .transfer(account, { gas, gasPrice: txInput.gasPrice }, txInput.to, txInput.amount);
     } else {
-      this.logger.debug('Prepare to send ethereums', user.email);
+      logger.debug('Prepare to send ethereums');
 
       signedTransaction = await this.web3Client.signTransactionByAccount({
         from: account.address,
@@ -210,7 +232,7 @@ export class TransactionApplication {
       );
     }
 
-    this.logger.debug('Init verification', user.email, transData.type, transData.to);
+    logger.debug('Init verification');
 
     const initiateVerification = this.newInitiateVerification(Verifications.TRANSACTION_SEND, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -227,7 +249,7 @@ export class TransactionApplication {
       userEmail: user.email,
       tx: signedTransaction,
       amount: txInput.amount,
-      from: user.wallets[0].address,
+      from: wallet.address,
       gas,
       gasPrice,
       contractAddress: toEthChecksumAddress(transData.contractAddress),
@@ -249,17 +271,27 @@ export class TransactionApplication {
    * @param user
    */
   async transactionSendVerify(verify: VerificationInput, user: User): Promise<any> {
-    this.logger.debug('Check transaction verification', user.email);
+    this.logger.debug('[transactionSendVerify] Check transaction verification', { meta: { email: user.email } });
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.TRANSACTION_SEND, verify.verification);
     const txPayload = verifyPayload as TransactionSendPayload;
 
-    this.logger.debug('Execute send transaction for', user.email, txPayload.type, txPayload.to);
+    let logger = this.logger.sub({
+      email: user.email,
+      type: txPayload.type,
+      from: txPayload.from,
+      to: txPayload.to,
+      amount: txPayload.amount,
+      contractAddress: txPayload.contractAddress
+    }, '[transactionSendVerify] ');
+
+    logger.debug('Execute send transaction');
 
     // mistake (or old version) in web3/types
     const transactionHash = await this.web3Client.sendSignedTransaction((txPayload.tx as any).rawTransaction);
 
-    this.logger.debug('Set transaction pending status for', user.email, transactionHash);
+    logger = logger.addMeta({ transactionHash });
+    logger.debug('Set transaction pending status');
 
     const transaction = Transaction.createTransaction({
       ...txPayload,

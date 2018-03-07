@@ -65,7 +65,7 @@ describe('Dashboard App', () => {
   });
 
   it('should get balances', async () => {
-    const balances = await dashboard.balancesFor(user);
+    const balances = await dashboard.balancesFor(user, user.wallets[0].address);
 
     expect(balances).is.not.null;
 

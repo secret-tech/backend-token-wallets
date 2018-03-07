@@ -16,7 +16,7 @@ export class DummyMailService implements EmailServiceInterface {
    * @inheritdoc
    */
   public send(sender: string, recipient: string, subject: string, text: string): Promise<any> {
-    this.logger.debug('Send email', sender, recipient, subject, text);
+    this.logger.debug('[send] Send email', sender, recipient, subject, text);
 
     return Promise.resolve(text);
   }
@@ -34,7 +34,7 @@ export class NsqChannelMailService implements EmailServiceInterface {
    * @inheritdoc
    */
   public send(sender: string, recipient: string, subject: string, text: string): Promise<any> {
-    this.logger.debug('Send email', sender, recipient, subject);
+    this.logger.debug('[send] Send email', { meta: { sender, recipient, subject } });
 
     return this.nsq.publish(NSQ_TOPIC_NOTIFICATION_EMAIL, {
       sender,

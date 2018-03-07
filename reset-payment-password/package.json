@@ -1,0 +1,15 @@
+{
+  "name": "reset-payment-password",
+  "version": "1.0.0",
+  "description": "",
+  "main": "check-crypto.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mongodb": "^3.0.2",
+    "yargs": "^11.0.0"
+  }
+}

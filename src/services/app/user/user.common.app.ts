@@ -11,6 +11,7 @@ import { RegisteredTokenRepository, RegisteredTokenRepositoryType, RegisteredTok
 import { Token } from '../../../entities/token';
 import { getAllNotifications, Preferences } from '../../../entities/preferences';
 import { getAllAllowedVerifications } from '../../external/verify.action.service';
+import { WalletNotFound } from '../../../exceptions';
 
 /**
  * UserCommonApplication
@@ -42,13 +43,11 @@ export class UserCommonApplication {
     }
 
     return {
-      ethAddress: user.wallets[0].address,
-      tokens: user.wallets[0].tokens.map(t => {
-        return {
-          ...t,
-          balance: undefined
-        };
-      }),
+      wallets: user.wallets.map(w => ({
+        ticker: w.ticker,
+        address: w.address,
+        tokens: w.tokens.map(t => ({ ...t, balance: undefined }))
+      })),
       preferences,
       email: user.email,
       name: user.name,
@@ -61,17 +60,30 @@ export class UserCommonApplication {
    * @param user
    * @param token
    */
-  async registerToken(user: User, token: {
+  async registerToken(user: User, walletAddress: string, token: {
     contractAddress: string;
     decimals: number;
     symbol: string;
     name: string;
   }): Promise<any> {
+    walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
+
+    this.logger.debug('[registerToken] Register token', {
+      meta: {
+        email: user.email, walletAddress, contractAddress: token.contractAddress
+      }
+    });
+
+    const wallet = user.getWalletByAddress(walletAddress);
+    if (!wallet) {
+      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+    }
+
     const userToken = Token.createToken(token);
 
     // replace
-    user.wallets[0].removeToken(userToken);
-    user.wallets[0].addToken(userToken);
+    wallet.removeToken(userToken);
+    wallet.addToken(userToken);
 
     await this.userRepository.save(user);
 

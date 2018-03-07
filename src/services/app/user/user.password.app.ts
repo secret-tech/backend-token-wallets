@@ -9,6 +9,7 @@ import { EmailQueueType, EmailQueueInterface } from '../../queues/email.queue';
 
 import successPasswordResetTemplate from '../../../resources/emails/8_success_password_reset';
 import successPasswordChangeTemplate from '../../../resources/emails/28_success_password_change';
+import successPaymentPasswordChangeTemplate from '../../../resources/emails/28_success_pay_password_change';
 
 import {
   UserNotFound,
@@ -24,6 +25,7 @@ import { VerificationInitiateContext } from '../../external/verify.context.servi
 import { VerifyActionServiceType, VerifyActionService, Verifications, VerifyMethod } from '../../external/verify.action.service';
 import { UserTimedId } from '../../timed.id';
 import { Notifications } from '../../../entities/preferences';
+import { MasterKeySecret, decryptTextByUserMasterKey, decryptUserMasterKey, getUserMasterKey } from '../../crypto';
 
 /**
  * UserPasswordApplication
@@ -60,7 +62,9 @@ export class UserPasswordApplication {
       throw new InvalidPassword('Invalid password');
     }
 
-    this.logger.debug('Initiate changing password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[initiateChangePassword] ');
+
+    logger.debug('Initiate verification');
 
     const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_PASSWORD, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -73,6 +77,8 @@ export class UserPasswordApplication {
     if (!user.isVerificationEnabled(Verifications.USER_CHANGE_PASSWORD)) {
       initiateVerification.setMethod(VerifyMethod.INLINE);
     }
+
+    logger.debug('Initiate verify action');
 
     const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
       newPassword: bcrypt.hashSync(params.newPassword)
@@ -90,11 +96,12 @@ export class UserPasswordApplication {
    */
   async verifyChangePassword(user: User, verify: VerificationInput): Promise<AccessTokenResponse> {
 
-    this.logger.debug('Verify atempt to change password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[verifyChangePassword] ');
+    logger.debug('Verify attempt');
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_PASSWORD, verify.verification);
 
-    this.logger.debug('Save changed password', user.email);
+    logger.debug('Save password');
 
     user.passwordHash = verifyPayload.newPassword;
 
@@ -109,7 +116,7 @@ export class UserPasswordApplication {
       });
     }
 
-    this.logger.debug('Recreate user with changed password in auth', user.email);
+    logger.debug('Recreate user in auth');
 
     await this.authClient.createUser({
       email: user.email,
@@ -118,7 +125,7 @@ export class UserPasswordApplication {
       sub: user.id.toString()
     });
 
-    this.logger.debug('Reauth user to get auth token after changing password', user.email);
+    logger.debug('Reauth user to get auth token');
 
     const loginResult = await this.authClient.loginUser({
       login: user.email,
@@ -128,7 +135,7 @@ export class UserPasswordApplication {
 
     const token = VerifiedToken.createVerifiedToken(user, loginResult.accessToken);
 
-    this.logger.debug('Save verified token with changed password', user.email);
+    logger.debug('Save verified token');
 
     await getConnection().getMongoRepository(VerifiedToken).save(token);
 
@@ -151,7 +158,7 @@ export class UserPasswordApplication {
       throw new UserNotFound('User is not found');
     }
 
-    this.logger.debug('Initiate reset password', user.email);
+    this.logger.debug('[initiateResetPassword] Initiate reset password', { meta: { email: user.email } });
 
     const initiateVerification = this.newInitiateVerification(Verifications.USER_RESET_PASSWORD, user.email);
     if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
@@ -186,7 +193,7 @@ export class UserPasswordApplication {
       throw new UserNotFound('User is not found');
     }
 
-    this.logger.debug('Verify attempt to reset password', user.email);
+    this.logger.debug('[verifyResetPassword] Verify attempt to reset password', { meta: { email: user.email } });
 
     const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_RESET_PASSWORD, params.verification);
 
@@ -220,12 +227,14 @@ export class UserPasswordApplication {
       throw new UserNotFound('User is not found');
     }
 
-    this.logger.debug('Save user with new reset password', user.email);
+    const logger = this.logger.sub({ email: user.email }, '[resetPasswordEnter] ');
+
+    logger.debug('Save user with new reset password');
 
     user.passwordHash = bcrypt.hashSync(params.password);
     await this.userRepository.save(user);
 
-    this.logger.debug('Reauth user to get new auth token after reset password', user.email);
+    logger.debug('Reauth user to get new auth token after reset password');
 
     await this.authClient.createUser({
       email: user.email,
@@ -245,6 +254,81 @@ export class UserPasswordApplication {
 
     return {
       isReset: true
+    };
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async initiateChangePaymentPassword(user: User, params: any): Promise<BaseInitiateResult> {
+    const logger = this.logger.sub({ email: user.email }, '[initiateChangePaymentPassword] ');
+    logger.debug('Initiate changing payment password');
+
+    const msc = new MasterKeySecret();
+
+    if (!decryptTextByUserMasterKey(msc, user.salt, params.oldPaymentPassword, user.securityKey)) {
+      throw new InvalidPassword('Invalid payment password');
+    }
+
+    logger.debug('Prepare new security key');
+
+    decryptUserMasterKey(msc, user.securityKey, params.oldPaymentPassword);
+    const newSecurityKey = getUserMasterKey(msc, params.newPaymentPassword);
+
+    const initiateVerification = this.newInitiateVerification(Verifications.USER_CHANGE_PAYMENT_PASSWORD, user.email);
+    if (user.defaultVerificationMethod === VerifyMethod.EMAIL) {
+      buildScopeEmailVerificationInitiate(
+        initiateVerification,
+        { user }
+      );
+    }
+
+    if (!user.isVerificationEnabled(Verifications.USER_CHANGE_PAYMENT_PASSWORD)) {
+      initiateVerification.setMethod(VerifyMethod.INLINE);
+    }
+
+    logger.debug('Initiate verification');
+
+    const { verifyInitiated } = await this.verifyAction.initiate(initiateVerification, {
+      securityKey: newSecurityKey
+    });
+
+    return {
+      verification: verifyInitiated
+    };
+  }
+
+  /**
+   *
+   * @param user
+   * @param params
+   */
+  async verifyChangePaymentPassword(user: User, verify: VerificationInput): Promise<any> {
+    const logger = this.logger.sub({ email: user.email }, '[verifyChangePaymentPassword] ');
+
+    logger.debug('Verify attempt to change payment password');
+
+    const { verifyPayload } = await this.verifyAction.verify(Verifications.USER_CHANGE_PAYMENT_PASSWORD, verify.verification);
+
+    logger.debug('Save new payment password');
+
+    user.securityKey = verifyPayload.securityKey;
+
+    await this.userRepository.save(user);
+
+    if (user.isNotificationEnabled(Notifications.USER_CHANGE_PAYMENT_PASSWORD)) {
+      this.emailQueue.addJob({
+        sender: config.email.from.general,
+        recipient: user.email,
+        subject: 'Payment Password Change Notification',
+        text: successPaymentPasswordChangeTemplate(user.name)
+      });
+    }
+
+    return {
+      isChanged: true
     };
   }
 }
