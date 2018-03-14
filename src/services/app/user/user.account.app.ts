@@ -76,7 +76,7 @@ export class UserAccountApplication {
     return transformers.transformCreatedUser(user, verifyInitiated);
   }
 
-  private createNewWallet(logger: SubLogger, user: User, paymentPassword: string) {
+  private async createNewWallet(logger: SubLogger, user: User, paymentPassword: string) {
     logger.debug('Create new wallet');
 
     // should be created every time for fresh master key
@@ -124,8 +124,11 @@ export class UserAccountApplication {
       tokens: []
     });
     newWallet.index = walletIndex;
+    logger.debug("Wallet index: " + walletIndex);
 
     user.addWallet(newWallet);
+    logger.debug("Wallets: ", user.wallets);
+    await this.userRepository.save(user);
 
     return newWallet;
   }
@@ -173,7 +176,7 @@ export class UserAccountApplication {
     });
     user.passwordHash = bcrypt.hashSync(userData.password);
 
-    this.createNewWallet(logger, user, userData.paymentPassword);
+    await this.createNewWallet(logger, user, userData.paymentPassword);
 
     logger.debug('Save user');
 

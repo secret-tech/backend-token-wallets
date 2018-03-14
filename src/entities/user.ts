@@ -92,7 +92,7 @@ export class User {
 
   getNextWalletIndex(): number {
     let max = -1;
-    this.wallets.forEach(w => max = Math.max(max, w.index));
+    this.wallets.forEach((w, i) => max = Math.max(max, i));
     return max + 1;
   }
 
