@@ -1,5 +1,6 @@
 # Moon Wallet Backend module
-This is backend module of [Moon Wallet](https://moonwallet.tech/)
+This is backend module of [Moon Wallet](https://moonwallet.tech/) backed with
+:heart: and :coffee: for the crypto community by [secret_tech](https://secrettech.io)
 ![Moon Wallet Screenshot](https://monosnap.com/file/ju7HjvPDg0csEeInRo11JrudDAJDc3.png)
 
 
@@ -51,3 +52,7 @@ For more info check [**API DOCS**](https://jincortech.github.io/backend-token-wa
 1. Run `mkdir /usr/local/lib/node_modules/aglio/node_modules/aglio-theme-olio/cache`
 1. Generate `aglio --theme-variables cyborg --theme-template triple -i apiary.apib -o ./docs/index.html`
 
+## License
+Apache 2.0 license
+
+[More details](https://github.com/JincorTech/backend-token-wallets/blob/develop/LICENSE)
