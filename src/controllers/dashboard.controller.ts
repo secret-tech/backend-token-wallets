@@ -106,7 +106,7 @@ export class DashboardController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         from: ethereumAddressValidator.optional(),
-        to: ethereumAddressValidator.required(),
+        to: ethereumAddressValidator.required().error(() => 'Invalid recipient address'),
         type: Joi.string().valid('eth_transfer', 'erc20_transfer').required(),
         contractAddress: ethereumAddressValidator.optional(),
         amount: Joi.alternatives([Joi.number().min(1e-6), Joi.string().regex(/(^[\d]+\.?[\d]*$)|(^[\d]*\.?[\d]+$)/)]).required(),
