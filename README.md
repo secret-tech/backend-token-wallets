@@ -4,8 +4,8 @@ This is backend module of [Moon Wallet](https://moonwallet.tech/) backed with
 ![Moon Wallet](https://monosnap.com/file/AWvzmQe6IvNezvjIhYwkSDWbiKB5en.png)
 [![Build Status](https://travis-ci.org/JincorTech/backend-token-wallets.svg?branch=master)](https://travis-ci.org/JincorTech/backend-token-wallets)
 
-This backend module can be used to build a typical ETH and ERC-20 tokens
-wallet. Currently it has the following functionality:
+> This backend module can be used to build a typical ETH and ERC-20 tokens
+wallet. Currently it has the following functionality
 
 1. Registration & Authorization
 1. Register any Token by specified contract address
@@ -37,6 +37,30 @@ For more info check [**API DOCS**](https://jincortech.github.io/backend-token-wa
 1. [secrettech Backend Notify](https://github.com/JincorTech/backend-notify) - 
  notifications
 1. Docker
+
+## Changelog
+**Closed issues**
+
+- Fix wallets creation [\#47](https://github.com/JincorTech/backend-token-wallets/issues/47)
+- Payments add gas limit settings [\#38](https://github.com/JincorTech/backend-token-wallets/issues/38)
+- Preferences: add an ability to disable 2FA [\#35](https://github.com/JincorTech/backend-token-wallets/issues/35)
+- Preferences: changing password for the same should fail [\#34](https://github.com/JincorTech/backend-token-wallets/issues/34)
+- Preferences: save email notification settings [\#33](https://github.com/JincorTech/backend-token-wallets/issues/33)
+- Sending: address check is case-sensetive [\#29](https://github.com/JincorTech/backend-token-wallets/issues/29)
+- Registration: email check is case-sensetive [\#28](https://github.com/JincorTech/backend-token-wallets/issues/28)
+- Add ability to control notifications and verifications  [\#19](https://github.com/JincorTech/backend-token-wallets/issues/19)
+- Add ability to retrieve all transactions for wallets. [\#16](https://github.com/JincorTech/backend-token-wallets/issues/16)
+- Add tests [\#12](https://github.com/JincorTech/backend-token-wallets/issues/12)
+- Ability to store encrypted privateKey in this service  [\#11](https://github.com/JincorTech/backend-token-wallets/issues/11)
+- Fix emails [\#10](https://github.com/JincorTech/backend-token-wallets/issues/10)
+- Work with set of tokens [\#9](https://github.com/JincorTech/backend-token-wallets/issues/9)
+- Add documentation. [\#8](https://github.com/JincorTech/backend-token-wallets/issues/8)
+- Add integration with backend-notify [\#5](https://github.com/JincorTech/backend-token-wallets/issues/5)
+- Implement methods for sending eth and any erc20  [\#3](https://github.com/JincorTech/backend-token-wallets/issues/3)
+- Test any smart contract [\#2](https://github.com/JincorTech/backend-token-wallets/issues/2)
+- First project adaptation [\#1](https://github.com/JincorTech/backend-token-wallets/issues/1)
+
+Full changelog available [**here**](/CONTRIBUTING.md)
 
 ## How to start development and run tests?
 
