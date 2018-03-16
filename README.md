@@ -24,6 +24,7 @@ by integration with
 
 
 For more info check [**API DOCS**](https://jincortech.github.io/backend-token-wallets)
+
 ![Moon Wallet Screenshot](https://monosnap.com/file/ju7HjvPDg0csEeInRo11JrudDAJDc3.png)
 
 ## Technology stack
