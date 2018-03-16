@@ -2,7 +2,7 @@
 This is backend module of [Moon Wallet](https://moonwallet.tech/) backed with
 :heart: and :coffee: for the crypto community by [secret_tech](https://secrettech.io)
 ![Moon Wallet](https://monosnap.com/file/AWvzmQe6IvNezvjIhYwkSDWbiKB5en.png)
-
+[![Build Status](https://travis-ci.org/JincorTech/backend-token-wallets.svg?branch=master)](https://travis-ci.org/JincorTech/backend-token-wallets)
 
 This backend module can be used to build a typical ETH and ERC-20 tokens
 wallet. Currently it has the following functionality:
