@@ -1,6 +1,6 @@
 # Change Log
 
-## [Unreleased](https://github.com/JincorTech/backend-token-wallets/tree/HEAD)
+## [v0.8.0-beta](https://github.com/JincorTech/backend-token-wallets/tree/v0.8.0-beta) (2018-03-16)
 
 **Implemented enhancements:**
 
