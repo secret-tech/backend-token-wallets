@@ -1,8 +1,11 @@
 # Moon Wallet Backend module
+[![Build Status](https://travis-ci.org/JincorTech/backend-token-wallets.svg?branch=master)](https://travis-ci.org/JincorTech/backend-token-wallets)
+
 This is backend module of [Moon Wallet](https://moonwallet.tech/) backed with
 :heart: and :coffee: for the crypto community by [secret_tech](https://secrettech.io)
+
+
 ![Moon Wallet](https://monosnap.com/file/AWvzmQe6IvNezvjIhYwkSDWbiKB5en.png)
-[![Build Status](https://travis-ci.org/JincorTech/backend-token-wallets.svg?branch=master)](https://travis-ci.org/JincorTech/backend-token-wallets)
 
 > This backend module can be used to build a typical ETH and ERC-20 tokens
 wallet. Currently it has the following functionality
@@ -60,7 +63,7 @@ For more info check [**API DOCS**](https://jincortech.github.io/backend-token-wa
 - Test any smart contract [\#2](https://github.com/JincorTech/backend-token-wallets/issues/2)
 - First project adaptation [\#1](https://github.com/JincorTech/backend-token-wallets/issues/1)
 
-Full changelog available [**here**](/CONTRIBUTING.md)
+Full changelog available [**here**](/CHANGELOG.md)
 
 ## How to start development and run tests?
 
@@ -69,6 +72,12 @@ Full changelog available [**here**](/CONTRIBUTING.md)
 1. Run `$ docker-compose -f docker-compose.test.yml run api /bin/sh`
 1. To install dependencies run `$ npm i`
 1. Run tests watch mode `$ npm run start:test`
+
+## Contributing
+Contributions are appreciated. If you found any bugs or in trouble with
+installing or running this module, feel free to open new issues.
+
+Contributing guideline can be found [**here**](/CONTRIBUTING.md)
 
 ## How to generate API docs?
 
