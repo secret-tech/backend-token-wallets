@@ -1,5 +1,5 @@
 # Moon Wallet Backend module
-[![Build Status](https://travis-ci.org/JincorTech/backend-token-wallets.svg?branch=master)](https://travis-ci.org/JincorTech/backend-token-wallets)
+[![Build Status](https://travis-ci.org/secret-tech/backend-token-wallets.svg?branch=master)](https://travis-ci.org/secret-tech/backend-token-wallets)
 
 This is backend module of [Moon Wallet](https://moonwallet.tech/) backed with
 :heart: and :coffee: for the crypto community by [secret_tech](https://secrettech.io)
