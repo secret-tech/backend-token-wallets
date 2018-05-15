@@ -19,7 +19,8 @@ import {
   InvalidPassword,
   TokenNotFound,
   AuthenticatorError,
-  IncorrectMnemonic
+  IncorrectMnemonic,
+  WalletNotFound
 } from '../../../exceptions';
 import { User } from '../../../entities/user';
 import { VerifiedToken } from '../../../entities/verified.token';
@@ -76,7 +77,7 @@ export class UserAccountApplication {
     return transformers.transformCreatedUser(user, verifyInitiated);
   }
 
-  private async createNewWallet(logger: SubLogger, user: User, paymentPassword: string) {
+  private async createNewWallet(logger: SubLogger, user: User, paymentPassword: string, inputWallet: InputWallet) {
     logger.debug('Create new wallet');
 
     // should be created every time for fresh master key
@@ -121,7 +122,9 @@ export class UserAccountApplication {
       ticker: 'ETH',
       address: account.address,
       balance: '0',
-      tokens: []
+      tokens: [],
+      name: inputWallet.name,
+      color: inputWallet.color
     });
     newWallet.index = walletIndex;
     logger.debug("Wallet index: " + walletIndex);
@@ -176,7 +179,6 @@ export class UserAccountApplication {
     });
     user.passwordHash = bcrypt.hashSync(userData.password);
 
-    await this.createNewWallet(logger, user, userData.paymentPassword);
 
     logger.debug('Save user');
 
@@ -224,21 +226,13 @@ export class UserAccountApplication {
       });
   }
 
-  private async activateUserAndGetNewWallets(logger: SubLogger, user: User): Promise<any[]> {
+  private async activateUser(logger: SubLogger, user: User): Promise<any[]> {
     logger.debug('Save verified user state');
 
     user.isVerified = true;
 
     await this.userRepository.save(user);
 
-    logger.debug('Prepare response wallets');
-
-    return [{
-      ticker: 'ETH',
-      address: user.wallets[0].address,
-      tokens: [],
-      balance: '0'
-    }];
   }
 
   /**
@@ -275,8 +269,7 @@ export class UserAccountApplication {
       deviceId: 'device'
     });
 
-    await this.addGlobalRegisteredTokens(logger, user, user.wallets[0]);
-    const newWallets = await this.activateUserAndGetNewWallets(logger, user);
+    await this.activateUser(logger, user);
 
     logger.debug('Save verified token');
 
@@ -292,7 +285,6 @@ export class UserAccountApplication {
 
     return {
       accessToken: token.token,
-      wallets: newWallets
     };
   }
 
@@ -585,12 +577,13 @@ export class UserAccountApplication {
    * @param user
    * @param type
    * @param paymentPassword
+   * @param inputWallet
    */
-  async createAndAddNewWallet(user: User, type: string, paymentPassword: string): Promise<any> {
+  async createAndAddNewWallet(user: User, type: string, paymentPassword: string, inputWallet: InputWallet): Promise<any> {
     const logger = this.logger.sub({ email: user.email, type }, '[createAndAddNewWallet] ');
     logger.debug('Create and add');
 
-    const newWallet = await this.createNewWallet(logger, user, paymentPassword);
+    const newWallet = await this.createNewWallet(logger, user, paymentPassword, inputWallet);
 
     this.addGlobalRegisteredTokens(logger.addMeta({ walletAddress: newWallet.address }), user, newWallet);
 
@@ -601,7 +594,42 @@ export class UserAccountApplication {
     return {
       ticker: 'ETH',
       address: newWallet.address,
-      balance: '0'
+      balance: '0',
+      name: newWallet.name,
+      color: newWallet.color
+    }
+  }
+
+  /**
+   *
+   * @param user
+   * @param inputWallet
+   */
+  async updateWallet(user: User, inputWallet: InputWallet): Promise<any> {
+    const logger = this.logger.sub({ email: user.email }, '[updateWallet]');
+    logger.debug('Update wallet');
+
+    const wallet = user.getWalletByAddress(inputWallet.address);
+
+    if (!wallet) {
+      throw new WalletNotFound('Wallet not found');
+    }
+
+    const walletIndex = user.wallets.indexOf(wallet);
+    wallet.updateWallet(inputWallet);
+
+    user.updateWallet(walletIndex, wallet);
+
+    logger.debug('Save updated wallet');
+
+    await this.userRepository.save(user);
+
+    return {
+      ticker: wallet.ticker,
+      address: wallet.address,
+      balance: wallet.balance,
+      name: wallet.name,
+      color: wallet.color
     }
   }
 }

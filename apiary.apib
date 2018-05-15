@@ -95,15 +95,7 @@ JWT token received by `/activate` DOES NOT require verification.
 + Response 200 (application/json)
 
         {
-            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "wallets": [
-                {
-                    "ticker": "ETH",
-                    "address": "0x7EB6Bea6eCf5aF3eA9c7e9dcb4D71966CFA4c9Eb",
-                    "tokens": [],
-                    "balance": "0"
-                }
-            ]
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         }
 
 ## Initiate login [/user/login/initiate]
@@ -592,7 +584,7 @@ For inline method you should pass any code (random) for verify action.
             "enabled": false
         }
 
-## Create new wallet [/user/wallets]
+## Wallets [/user/me/wallets]
 
 ### Create new wallet [POST]
 
@@ -600,6 +592,8 @@ For inline method you should pass any code (random) for verify action.
     + Attributes
         + type: `ETH` (required, string) - Only ETH allowed.
         + paymentPassword: `passwordA6` (required, string) - min: 6, regex: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$
+        + name (required, string)
+        + color (required, number)
 
     + Headers
 
@@ -609,7 +603,9 @@ For inline method you should pass any code (random) for verify action.
 
             {
                 "type": "ETH",
-                "paymentPassword": "payment12A6!@#$%^&*()_-=+|/"
+                "paymentPassword": "payment12A6!@#$%^&*()_-=+|/",
+                "name": "some name",
+                "color": #F0F1F2
             }
 
 + Response 200 (application/json)
@@ -617,7 +613,39 @@ For inline method you should pass any code (random) for verify action.
             {
                 "ticker": "ETH",
                 "address": "0xdb369b56BA7b07cF287f611Fbf0DAA4A8a4C2751",
-                "tokens": []
+                "tokens": [],
+                "name": "some name",
+                "color": "#F0F1F2"
+            }
+
+### Update wallet [PUT]
+
++ Request (application/json)
+    + Attributes
+        + address (required, string)
+        + name (string) - Required if color is not presented
+        + color (number) - Required if name is not presented
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {
+                "address": "0xdb369b56BA7b07cF287f611Fbf0DAA4A8a4C2751",
+                "name": "some name",
+                "color": #F0F1F2
+            }
+
++ Response 200 (application/json)
+
+            {
+                "ticker": "ETH",
+                "address": "0xdb369b56BA7b07cF287f611Fbf0DAA4A8a4C2751",
+                "tokens": [],
+                "name": "some name",
+                "color": "#F0F1F2"
             }
 
 ## Register ERC20 token [/user/me/erc20token/register]
