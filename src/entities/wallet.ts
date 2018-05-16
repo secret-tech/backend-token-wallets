@@ -18,6 +18,12 @@ export class Wallet {
   tokens: Token[];
 
   @Column()
+  name: string;
+
+  @Column()
+  color: number;
+
+  @Column()
   createdAt: number;
 
   static createWallet(data: any) {
@@ -27,6 +33,8 @@ export class Wallet {
     wallet.address = data.address;
     wallet.balance = data.balance || 0;
     wallet.tokens = data.tokens || [];
+    wallet.name = data.name;
+    wallet.color = data.color;
     wallet.createdAt = ~~(+new Date() / 1000);
     return wallet;
   }
@@ -44,5 +52,15 @@ export class Wallet {
 
   removeToken(token: Token) {
     this.tokens = this.tokens.filter(t => t.contractAddress.toLowerCase() !== token.contractAddress.toLowerCase());
+  }
+
+  updateWallet(data: any) {
+    if (data.name) {
+      this.name = data.name;
+    }
+
+    if (data.color) {
+      this.color = data.color;
+    }
   }
 }
