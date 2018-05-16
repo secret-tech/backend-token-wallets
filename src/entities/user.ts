@@ -115,4 +115,8 @@ export class User {
 
     return this.wallets[0];
   }
+
+  updateWallet(index: number, wallet: Wallet) {
+    this.wallets[index] = wallet;
+  }
 }

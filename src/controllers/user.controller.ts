@@ -1,7 +1,7 @@
 import * as Joi from 'joi';
 import { Response, Request } from 'express';
 import { inject, injectable } from 'inversify';
-import { controller, httpPost, httpGet } from 'inversify-express-utils';
+import { controller, httpPost, httpGet, httpPut } from 'inversify-express-utils';
 
 import { responseWith } from '../helpers/responses';
 import { AuthenticatedRequest } from '../interfaces';
@@ -368,11 +368,56 @@ export class UserController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         type: Joi.string().valid('ETH').required(),
-        paymentPassword: Joi.string().required().regex(passwordRegex)
+        paymentPassword: Joi.string().required().regex(passwordRegex),
+        name: Joi.string().required(),
+        color: Joi.number().required(),
       }), req.body, res, next);
     }
   )
   async createNewWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
-    res.json(await this.userAccountApp.createAndAddNewWallet(req.app.locals.user, req.body.type, req.body.paymentPassword));
+    res.json(await this.userAccountApp.createAndAddNewWallet(
+      req.app.locals.user,
+      req.body.type,
+      req.body.paymentPassword,
+      {
+        name: req.body.name,
+        color: req.body.color
+      }
+    ));
+  }
+
+  /**
+   *
+   * @param req
+   * @param res
+   */
+  @httpPut(
+    '/me/wallets',
+    'AuthMiddleware',
+    (req, res, next) => {
+      commonFlowRequestMiddleware(Joi.object().keys({
+        address: Joi.string().required(),
+        name: Joi.string().when('color', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.required()
+        }),
+        color: Joi.number().when('name', {
+          is: Joi.exist(),
+          then: Joi.optional(),
+          otherwise: Joi.required()
+        }),
+      }), req.body, res, next);
+    }
+  )
+  async updateWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
+    res.json(await this.userAccountApp.updateWallet(
+      req.app.locals.user,
+      {
+        address: req.body.address,
+        name: req.body.name || null,
+        color: req.body.color || null
+      }
+    ));
   }
 }
