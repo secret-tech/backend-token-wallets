@@ -79,10 +79,11 @@ describe('Transaction App', () => {
   });
 
   it('should get transactions history', async () => {
-    const history = await transaction.transactionHistory(user, user.wallets[0].address);
+    const history = await transaction.transactionHistory(user, user.wallets[0].address, 0, 0);
 
-    expect(history.length).is.equal(1);
-    expect(history[0].amount).is.equal('0.000000000000001');
+    expect(history.count).is.equal(1);
+    expect(history.data.length).is.equal(1);
+    expect(history.data[0].amount).is.equal('0.000000000000001');
   });
 
   it('should fail transfer ethereum with incorrected password', async () => {

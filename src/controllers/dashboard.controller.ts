@@ -65,12 +65,19 @@ export class DashboardController {
     '/transactions',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
-        walletAddress: ethereumAddressValidator.optional()
+        walletAddress: ethereumAddressValidator.optional(),
+        page: Joi.number().optional(),
+        limit: Joi.number().optional()
       }), req.query, res, next);
     }
   )
   async transactionHistory(req: AuthenticatedRequest & Request, res: Response, next: NextFunction): Promise<void> {
-    res.json(await this.transactionApp.transactionHistory(req.app.locals.user, req.query.walletAddress));
+    res.json(await this.transactionApp.transactionHistory(
+      req.app.locals.user,
+      req.query.walletAddress,
+      req.query.page || 0,
+      req.query.limit || 50
+    ));
   }
 
   /**
