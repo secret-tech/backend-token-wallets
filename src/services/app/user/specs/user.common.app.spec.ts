@@ -34,6 +34,11 @@ describe('User Common App', () => {
   it('should get user info', async () => {
     const userInfo = await userCommon.getUserInfo(user);
     expect(userInfo.email).is.equal(user.email);
+    expect(userInfo.wallets[0].tokens).is.lengthOf(8);
+    expect(userInfo.wallets[0].balances).is.lengthOf(5);
+    expect(userInfo.wallets[0].assetsCount).is.equal(7);
+
+    userInfo.wallets[0].balances.map(t => expect(t.value).is.above(0));
   });
 
   it('should register new token', async () => {
