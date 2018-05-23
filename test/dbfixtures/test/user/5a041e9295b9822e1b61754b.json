@@ -28,6 +28,55 @@
         "symbol": "TOK",
         "decimals": "18",
         "balance": "0"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A75",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "1"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A76",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "2"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A77",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "3"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A78",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "4"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A79",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "5"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A80",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "6"
+      },
+      {
+        "contractAddress": "0xC31382Ef54B77bE67605980197b76a40417B5A81",
+        "name": "TOKEN",
+        "symbol": "TOK",
+        "decimals": "18",
+        "balance": "7"
       }
     ]
   }]
