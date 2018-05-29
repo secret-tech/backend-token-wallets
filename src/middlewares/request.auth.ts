@@ -8,7 +8,6 @@ import { User } from '../entities/user';
 import { VerifiedToken } from '../entities/verified.token';
 import { AuthenticatedRequest } from '../interfaces';
 import { AuthClientType, AuthClientInterface } from '../services/external/auth.client';
-import {NotAuthorized, UserNotFound} from '../exceptions';
 import * as i18next from 'i18next';
 
 /* istanbul ignore next */

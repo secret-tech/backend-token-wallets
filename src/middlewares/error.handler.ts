@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as Err from '../exceptions';
 import { Logger } from '../logger';
 import * as i18next from 'i18next';
-import {ErrorWithFields} from '../exceptions';
+import { ErrorWithFields } from '../exceptions';
 
 const logger = Logger.getInstance('ERROR_HANDLER');
 
