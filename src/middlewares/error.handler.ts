@@ -2,37 +2,46 @@ import { Request, Response, NextFunction } from 'express';
 
 import * as Err from '../exceptions';
 import { Logger } from '../logger';
+import * as i18next from 'i18next';
+import {ErrorWithFields} from '../exceptions';
 
 const logger = Logger.getInstance('ERROR_HANDLER');
 
-export default function defaultExceptionHandle(err: Error, req: Request, res: Response, next: NextFunction): void {
+export default function defaultExceptionHandle(err: ErrorWithFields, req: Request, res: Response, next: NextFunction): void {
   let status;
+  const lang = req.acceptsLanguages() ? req.acceptsLanguages() : 'en';
+  const translations = lang != 'en' ? require('../resources/locales/' + lang + '/errors.json') : null;
+
+  i18next.init({
+    lng: lang.toString(),
+    resources: translations
+  });
 
   switch (err.constructor) {
     case Err.NotCorrectTransactionRequest:
-      // no break
+    // no break
     case Err.UserExists:
-      // no break
+    // no break
     case Err.NotCorrectVerificationCode:
-      // no break
+    // no break
     case Err.MaxVerificationsAttemptsReached:
-      // no break
+    // no break
     case Err.IncorrectMnemonic:
-      // no break
+    // no break
     case Err.InsufficientEthBalance:
-      // no break
+    // no break
     case Err.AuthenticatorError:
       status = 400;
       break;
     case Err.InvalidPassword:
-      // no break
+    // no break
     case Err.UserNotActivated:
       status = 403;
       break;
     case Err.VerificationIsNotFound:
-      // no break
+    // no break
     case Err.WalletNotFound:
-      // no break
+    // no break
     case Err.UserNotFound:
       status = 404;
       break;
@@ -50,6 +59,6 @@ export default function defaultExceptionHandle(err: Error, req: Request, res: Re
 
   res.status(status).send({
     statusCode: status,
-    error: err.message
+    error: i18next.t(err.message, err.fields)
   });
 }

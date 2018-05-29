@@ -81,7 +81,9 @@ export class UserCommonApplication {
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: walletAddress
+      });
     }
 
     const userToken = Token.createToken(token);

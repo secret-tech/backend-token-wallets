@@ -41,7 +41,9 @@ export class DashboardApplication {
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: walletAddress
+      });
     }
 
     const [ethBalance, erc20TokensBalance] = await dashboardCache.run('ubalances' + user.id.toString() + walletAddress, () => {

@@ -6,7 +6,8 @@ import { base64decode } from '../helpers/helpers';
 import { responseErrorWithObject } from '../helpers/responses';
 
 const options = {
-  allowUnknown: true
+  allowUnknown: true,
+  language: {}
 };
 
 export const ethereumAddressValidator = Joi.string().regex(/^0x[\da-fA-F]{40,40}$/);
@@ -20,13 +21,26 @@ export const ethereumAddressValidator = Joi.string().regex(/^0x[\da-fA-F]{40,40}
  * @param next
  */
 /* istanbul ignore next */
-export function commonFlowRequestMiddleware(scheme: Joi.Schema, data: any, res: Response, next: NextFunction) {
+export function commonFlowRequestMiddleware(scheme: Joi.Schema, req: Request, res: Response, next: NextFunction) {
+  const lang = req.acceptsLanguages() ? req.acceptsLanguages() : 'ru';
+  let data: any = {};
+
+  if (lang != 'en') {
+    options.language = require('../resources/locales/' + lang + '/validation.json');
+  }
+
+  if (req.method.toLocaleLowerCase() === 'get') {
+    data = req.query;
+  } else {
+    data = req.body;
+  }
+
   const result = Joi.validate(data || {}, scheme, options);
 
   if (result.error) {
     return responseErrorWithObject(res, {
       'error': result.error,
-      'details': result.value
+      'message': result.value,
     }, UNPROCESSABLE_ENTITY);
   } else {
     return next();
@@ -55,5 +69,5 @@ export function verificationRequired(req: Request, res: Response, next: NextFunc
     verification: verificationValidateSchema
   });
 
-  commonFlowRequestMiddleware(schema, req.body, res, next);
+  commonFlowRequestMiddleware(schema, req, res, next);
 }

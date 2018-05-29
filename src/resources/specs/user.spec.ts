@@ -4,7 +4,7 @@ import { Wallet } from '../../entities/wallet';
 import { User } from '../../entities/user';
 import { Notifications } from '../../entities/preferences';
 import { Verifications } from '../../services/external/verify.action.service';
-import { WalletNotFound } from '../../exceptions';
+import {UserNotFound, WalletNotFound} from '../../exceptions';
 
 const { expect } = chai;
 

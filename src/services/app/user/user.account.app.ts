@@ -249,7 +249,9 @@ export class UserAccountApplication {
     });
 
     if (!user) {
-      throw new UserNotFound('User is not found');
+      throw new UserNotFound('User is not found', {
+        email: verifyPayload.userEmail
+      });
     }
     if (user.isVerified) {
       throw new UserExists('User already verified');
@@ -304,7 +306,7 @@ export class UserAccountApplication {
     });
 
     if (!user || !user.isVerified) {
-      throw new UserNotFound('User is not found or not activated!');
+      throw new UserNotFound('User is not found or not activated');
     }
 
     if (!bcrypt.compareSync(loginData.password, user.passwordHash)) {
