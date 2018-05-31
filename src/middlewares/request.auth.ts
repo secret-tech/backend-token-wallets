@@ -8,6 +8,7 @@ import { User } from '../entities/user';
 import { VerifiedToken } from '../entities/verified.token';
 import { AuthenticatedRequest } from '../interfaces';
 import { AuthClientType, AuthClientInterface } from '../services/external/auth.client';
+import * as i18next from 'i18next';
 
 /* istanbul ignore next */
 @injectable()
@@ -22,6 +23,14 @@ export class AuthMiddleware extends BaseMiddleware {
    * @param next
    */
   handler(req: AuthenticatedRequest & Request, res: Response, next: NextFunction) {
+    const lang = req.acceptsLanguages() ? req.acceptsLanguages() : 'en';
+    const translations = lang != 'en' ? require('../resources/locales/' + lang + '/errors.json') : null;
+
+    i18next.init({
+      lng: lang.toString(),
+      resources: translations
+    });
+
     if (!this.expressBearer) {
       this.expressBearer = expressBearerToken();
     }
@@ -48,7 +57,7 @@ export class AuthMiddleware extends BaseMiddleware {
 
         if (!req.app.locals.user) {
           return res.status(404).json({
-            error: 'User is not found'
+            error: i18next.t('User is not found')
           });
         }
 
@@ -62,7 +71,7 @@ export class AuthMiddleware extends BaseMiddleware {
   notAuthorized(res: Response) {
     return res.status(401).json({
       statusCode: 401,
-      error: 'Not Authorized'
+      error: i18next.t('Not Authorized')
     });
   }
 }

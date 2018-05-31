@@ -1,0 +1,31 @@
+{
+  "ru": {
+    "translation": {
+      "Not Authorized": "Не авторизован",
+      "Login and payment passwords are matched": "Пароль для входа и платежный пароль совпадают",
+      "Invalid password": "Неверный пароль",
+      "Invalid payment password": "Неверный платежный пароль",
+      "User already verified": "Пользователь уже проверен",
+      "User already exists": "Пользователь уже существует",
+      "User is not found": "Пользователь не найден",
+      "User is not found or not activated": "Пользователь не найден или не активирован",
+      "Single wallet cant be found, you should obviously specified a wallet address": "Один кошелек не может быть найден, вы должны явно указать адрес Кошелька ",
+      "Wallet not found": "Кошелек не найден",
+      "Wallet not found: {{address}}": "Кошелек не найден: {{address}}",
+      "Access token is not found for current user": "Токен доступа для текущего пользователя не найден",
+      "Access token is not any match with user": "Токен доступа не подходит для пользователя",
+      "Invalid token decimals: {{decimals}}": "Неверный decimals контракта: {{decimals}}",
+      "GoogleAuth is disabled already": "GoogleAuth уже отключен",
+      "GoogleAuth is enabled already": "GoogleAuth уже включен",
+      "Senseless operation, to send to yourself": "Бессмысленная операция, послать себе",
+      "Empty token address": "Пустой адрес контракта",
+      "Not correct code": "Неверный код",
+      "Invalid scope": "Неверная область проверки",
+      "Verify action is not found or expired": "Действие проверки не найдено или истекло",
+      "Code was expired or not found. Please retry": "Код истек или не найден. Пожалуйста, повторите попытку.",
+      "Insufficient funds to perform this operation and pay tx fee": "Недостаточно средств для выполнения этой операции и оплаты tx fee",
+      "You have used all attempts to enter code": "Вы использовали все попытки ввода кода",
+      "Invalid address": "Неверный адрес"
+    }
+  }
+}

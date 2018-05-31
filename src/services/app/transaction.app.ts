@@ -111,7 +111,9 @@ export class TransactionApplication {
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: walletAddress
+      });
     }
 
     const skip = page * limit;
@@ -176,7 +178,9 @@ export class TransactionApplication {
 
     const wallet = user.getWalletByAddress(transData.from);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + transData.from);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: transData.from
+      });
     }
 
     const msc = new MasterKeySecret();

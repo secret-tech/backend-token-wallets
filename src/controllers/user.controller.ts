@@ -43,7 +43,7 @@ export class UserController {
         password: Joi.string().required().regex(passwordRegex),
         paymentPassword: Joi.string().required().regex(passwordRegex), // @TODO: .disallow(Joi.ref('password'))
         agreeTos: Joi.boolean().only(true).required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async create(req: Request, res: Response): Promise<void> {
@@ -76,7 +76,7 @@ export class UserController {
       commonFlowRequestMiddleware(Joi.object().keys({
         email: Joi.string().email().required(),
         password: Joi.string().required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async initiateLogin(req: RemoteInfoRequest & Request, res: Response): Promise<void> {
@@ -126,7 +126,7 @@ export class UserController {
         symbol: Joi.string().required(),
         name: Joi.string().optional(),
         decimals: Joi.number().valid(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30).required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async registerErc20Token(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
@@ -145,7 +145,7 @@ export class UserController {
       commonFlowRequestMiddleware(Joi.object().keys({
         oldPaymentPassword: Joi.string().required(),
         newPaymentPassword: Joi.string().regex(passwordRegex).disallow(Joi.ref('oldPaymentPassword')).required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async initiateChangePaymentPassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
@@ -178,7 +178,7 @@ export class UserController {
       commonFlowRequestMiddleware(Joi.object().keys({
         oldPassword: Joi.string().required(),
         newPassword: Joi.string().regex(passwordRegex).disallow(Joi.ref('oldPassword')).required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async initiateChangePassword(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
@@ -209,7 +209,7 @@ export class UserController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         email: Joi.string().required().email()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async initiateResetPassword(req: Request, res: Response): Promise<void> {
@@ -227,7 +227,7 @@ export class UserController {
       commonFlowRequestMiddleware(Joi.object().keys({
         email: Joi.string().required().email(),
         verification: verificationValidateSchema
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async verifyResetPassword(req: Request, res: Response): Promise<void> {
@@ -246,7 +246,7 @@ export class UserController {
         email: Joi.string().email().required(),
         resetId: Joi.string().required(),
         password: Joi.string().required().regex(passwordRegex)
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async enterResetPassword(req: Request, res: Response): Promise<void> {
@@ -318,7 +318,7 @@ export class UserController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         notifications: Joi.object().required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async setNotification(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
@@ -336,7 +336,7 @@ export class UserController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         verifications: Joi.object().required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async setVerificationInitiate(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
@@ -371,7 +371,7 @@ export class UserController {
         paymentPassword: Joi.string().required().regex(passwordRegex),
         name: Joi.string().required(),
         color: Joi.number().required(),
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async createNewWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
@@ -407,7 +407,7 @@ export class UserController {
           then: Joi.optional(),
           otherwise: Joi.required()
         }),
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async updateWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {
