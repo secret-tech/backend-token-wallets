@@ -226,7 +226,7 @@ export class UserAccountApplication {
       });
   }
 
-  private async activateUser(logger: SubLogger, user: User): void {
+  private async activateUser(logger: SubLogger, user: User): Promise<void> {
     logger.debug('Save verified user state');
 
     user.isVerified = true;
