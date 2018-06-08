@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:8.9.1
+FROM mhart/alpine-node:10
 
 WORKDIR /usr/src/app
 
