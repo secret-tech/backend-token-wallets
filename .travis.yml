@@ -13,7 +13,6 @@ install:
 - docker-compose -f docker-compose.test.yml build --no-cache api
 script:
 - docker-compose -f docker-compose.test.yml run --rm api sh -c "npm run test:cover"
-after_success:
 - npm run build
 - chmod ugo+x ./build.sh
 - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [ "$TRAVIS_BRANCH"

@@ -4,13 +4,15 @@ import * as Err from '../exceptions';
 import { Logger } from '../logger';
 import * as i18next from 'i18next';
 import { ErrorWithFields } from '../exceptions';
+import * as fs from 'fs';
 
 const logger = Logger.getInstance('ERROR_HANDLER');
 
 export default function defaultExceptionHandle(err: ErrorWithFields, req: Request, res: Response, next: NextFunction): void {
   let status;
-  const lang = req.acceptsLanguages() ? req.acceptsLanguages() : 'en';
-  const translations = lang != 'en' ? require('../resources/locales/' + lang + '/errors.json') : null;
+  const lang = req.get('lang') || 'en';
+  const langPath = `../resources/locales/${lang}/errors.json`;
+  const translations = fs.existsSync(langPath) ? require(langPath) : null;
 
   i18next.init({
     lng: lang.toString(),

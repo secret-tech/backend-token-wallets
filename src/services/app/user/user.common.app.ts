@@ -47,11 +47,11 @@ export class UserCommonApplication {
         ticker: w.ticker,
         address: w.address,
         tokens: w.tokens.map(t => ({ ...t, balance: undefined })),
-        balances: w.tokens.filter(t => t.balance > 0).filter((t, i) => i < 5).map(t => ({
+        balances: w.tokens.filter(t => Number(t.balance) > 0).filter((t, i) => i < 5).map(t => ({
           token: t.symbol,
           value: Number(t.balance)
         })),
-        assetsCount: w.tokens.filter(t => t.balance > 0).length
+        assetsCount: w.tokens.filter(t => Number(t.balance) > 0).length
       })),
       preferences,
       email: user.email,

@@ -4,6 +4,7 @@ import { UNPROCESSABLE_ENTITY } from 'http-status';
 
 import { base64decode } from '../helpers/helpers';
 import { responseErrorWithObject } from '../helpers/responses';
+import * as fs from 'fs';
 
 const options = {
   allowUnknown: true,
@@ -22,11 +23,13 @@ export const ethereumAddressValidator = Joi.string().regex(/^0x[\da-fA-F]{40,40}
  */
 /* istanbul ignore next */
 export function commonFlowRequestMiddleware(scheme: Joi.Schema, req: Request, res: Response, next: NextFunction) {
-  const lang = req.acceptsLanguages() ? req.acceptsLanguages() : 'ru';
+  const lang = req.get('lang') || 'en';
+  const langPath = `../resources/locales/${lang}/validation.json`;
+
   let data: any = {};
 
-  if (lang != 'en') {
-    options.language = require('../resources/locales/' + lang + '/validation.json');
+  if (fs.existsSync(langPath)) {
+    options.language = require(langPath);
   }
 
   if (req.method.toLocaleLowerCase() === 'get') {
