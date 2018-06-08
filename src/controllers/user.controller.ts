@@ -398,14 +398,14 @@ export class UserController {
       commonFlowRequestMiddleware(Joi.object().keys({
         address: Joi.string().required(),
         name: Joi.string().when('color', {
-          is: Joi.exist(),
-          then: Joi.optional(),
-          otherwise: Joi.required()
+          is: null,
+          then: Joi.required(),
+          otherwise: Joi.optional()
         }),
         color: Joi.number().when('name', {
-          is: Joi.exist(),
-          then: Joi.optional(),
-          otherwise: Joi.required()
+          is: null,
+          then: Joi.required(),
+          otherwise: Joi.optional()
         }),
       }), req, res, next);
     }

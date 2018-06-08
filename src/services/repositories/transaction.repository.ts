@@ -132,7 +132,7 @@ export class TransactionRepository implements TransactionRepositoryInterface {
         }
       ]
     })
-    .count();
+    .count(false);
 
     return count;
   }

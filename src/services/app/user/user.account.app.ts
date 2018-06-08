@@ -226,7 +226,7 @@ export class UserAccountApplication {
       });
   }
 
-  private async activateUser(logger: SubLogger, user: User): Promise<any[]> {
+  private async activateUser(logger: SubLogger, user: User): void {
     logger.debug('Save verified user state');
 
     user.isVerified = true;
@@ -286,7 +286,7 @@ export class UserAccountApplication {
     });
 
     return {
-      accessToken: token.token,
+      accessToken: token.token
     };
   }
 
