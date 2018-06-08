@@ -23,8 +23,8 @@ export const ethereumAddressValidator = Joi.string().regex(/^0x[\da-fA-F]{40,40}
  */
 /* istanbul ignore next */
 export function commonFlowRequestMiddleware(scheme: Joi.Schema, req: Request, res: Response, next: NextFunction) {
-  const lang = typeof req.header('lang') != 'undefined' ? req.header('lang') : 'en';
-  const langPath = '../resources/locales/' + lang + '/validation.json';
+  const lang = req.get('lang') || 'en';
+  const langPath = `../resources/locales/${lang}/validation.json`;
 
   let data: any = {};
 
