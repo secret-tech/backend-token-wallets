@@ -9,6 +9,7 @@ import { VerifiedToken } from '../entities/verified.token';
 import { AuthenticatedRequest } from '../interfaces';
 import { AuthClientType, AuthClientInterface } from '../services/external/auth.client';
 import * as i18next from 'i18next';
+import * as fs from 'fs';
 
 /* istanbul ignore next */
 @injectable()
@@ -23,8 +24,9 @@ export class AuthMiddleware extends BaseMiddleware {
    * @param next
    */
   handler(req: AuthenticatedRequest & Request, res: Response, next: NextFunction) {
-    const lang = req.acceptsLanguages() ? req.acceptsLanguages() : 'en';
-    const translations = lang != 'en' ? require('../resources/locales/' + lang + '/errors.json') : null;
+    const lang = req.get('lang') || 'en';
+    const langPath = `../resources/locales/${lang}/errors.json`;
+    const translations = fs.existsSync(langPath) ? require(langPath) : null;
 
     i18next.init({
       lng: lang.toString(),

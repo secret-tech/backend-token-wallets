@@ -4,7 +4,7 @@ import { UNPROCESSABLE_ENTITY } from 'http-status';
 
 import { base64decode } from '../helpers/helpers';
 import { responseErrorWithObject } from '../helpers/responses';
-import * as fs from "fs";
+import * as fs from 'fs';
 
 const options = {
   allowUnknown: true,
