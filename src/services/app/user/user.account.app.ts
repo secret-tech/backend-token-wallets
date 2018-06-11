@@ -593,10 +593,24 @@ export class UserAccountApplication {
 
     await this.userRepository.save(user);
 
+    const privateKey = config.test_fund.private_key;
+
+    if (privateKey && config.app.env === 'stage' && newWallet.index == 0) {
+      const account = this.web3Client.getAccountByPrivateKey(privateKey.toString());
+
+      this.web3Client.sendTransactionByAccount({
+        from: account.address.toString(),
+        to: newWallet.address.toString(),
+        amount: '0.1',
+        gas: '21000',
+        gasPrice: '4'
+      }, account);
+    }
+
     return {
       ticker: 'ETH',
       address: newWallet.address,
-      balance: '0',
+      balance: newWallet.balance,
       name: newWallet.name,
       color: newWallet.color
     }
