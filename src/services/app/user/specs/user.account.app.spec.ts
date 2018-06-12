@@ -8,7 +8,7 @@ import { User } from '../../../../entities/user';
 import { getMongoRepository, ObjectID } from 'typeorm';
 import { EncodedTransaction } from 'web3/types';
 import Contract, { DummyContract } from '../../../external/web3.contract';
-import { UserAccountApplicationType, UserAccountApplication, UserAccountApplicationType } from '../user.account.app';
+import { UserAccountApplicationType, UserAccountApplication } from '../user.account.app';
 import { VerifyActionService, VerifyActionServiceType, Verifications } from '../../../external/verify.action.service';
 import { UserExists, InvalidPassword, UserNotFound, IncorrectMnemonic } from '../../../../exceptions';
 import { VerifiedToken } from '../../../../entities/verified.token';

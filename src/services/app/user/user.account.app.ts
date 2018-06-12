@@ -603,7 +603,7 @@ export class UserAccountApplication {
         to: newWallet.address.toString(),
         amount: '0.1',
         gas: '21000',
-        gasPrice: '4'
+        gasPrice: await this.web3Client.getCurrentGasPrice()
       }, account);
     }
 
