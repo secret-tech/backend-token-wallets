@@ -52,6 +52,7 @@ const {
 
   RPC_TYPE,
   RPC_ADDRESS,
+  TEST_FUND_PK,
 
   WEB3_RESTORE_START_BLOCK
 } = process.env;
@@ -137,5 +138,8 @@ export default {
     subscribers: [
       ORM_SUBSCRIBER_DIR
     ]
+  },
+  test_fund: {
+    private_key: TEST_FUND_PK
   }
 };
