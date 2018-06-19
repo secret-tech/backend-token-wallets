@@ -10,7 +10,7 @@ const logger = Logger.getInstance('ERROR_HANDLER');
 
 export default function defaultExceptionHandle(err: ErrorWithFields, req: Request, res: Response, next: NextFunction): void {
   let status;
-  const lang = req.get('lang') || 'en';
+  const lang = req.acceptsLanguages() || 'en';
   const langPath = `../resources/locales/${lang}/errors.json`;
   const translations = fs.existsSync(langPath) ? require(langPath) : null;
 
