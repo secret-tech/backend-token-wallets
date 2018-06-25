@@ -59,7 +59,7 @@ export class AuthMiddleware extends BaseMiddleware {
 
         if (!req.app.locals.user) {
           return res.status(404).json({
-            error: i18next.t('User is not found')
+            message: i18next.t('User is not found')
           });
         }
 
@@ -72,8 +72,8 @@ export class AuthMiddleware extends BaseMiddleware {
 
   notAuthorized(res: Response) {
     return res.status(401).json({
-      statusCode: 401,
-      error: i18next.t('Not Authorized')
+      status: 401,
+      message: i18next.t('Not Authorized')
     });
   }
 }

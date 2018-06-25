@@ -5,6 +5,7 @@ import { Logger } from '../logger';
 import * as i18next from 'i18next';
 import { ErrorWithFields } from '../exceptions';
 import * as fs from 'fs';
+import { responseErrorWithObject } from '../helpers/responses';
 
 const logger = Logger.getInstance('ERROR_HANDLER');
 
@@ -59,8 +60,7 @@ export default function defaultExceptionHandle(err: ErrorWithFields, req: Reques
     logger.debug(status, { error: err });
   }
 
-  res.status(status).send({
-    statusCode: status,
-    error: i18next.t(err.message, err.fields)
-  });
+  responseErrorWithObject(res, {
+    message: i18next.t(err.message, err.fields)
+  }, status);
 }

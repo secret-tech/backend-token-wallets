@@ -58,8 +58,8 @@ export class HttpServer {
       // 404 handler
       expressApp.use((req, res, next) => {
         res.status(404).send({
-          statusCode: 404,
-          error: 'Route is not found'
+          status: 404,
+          message: 'Route is not found'
         });
       });
 
