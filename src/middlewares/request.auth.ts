@@ -24,7 +24,7 @@ export class AuthMiddleware extends BaseMiddleware {
    * @param next
    */
   handler(req: AuthenticatedRequest & Request, res: Response, next: NextFunction) {
-    const lang = req.get('lang') || 'en';
+    const lang = req.acceptsLanguages() || 'en';
     const langPath = `../resources/locales/${lang}/errors.json`;
     const translations = fs.existsSync(langPath) ? require(langPath) : null;
 
@@ -59,7 +59,7 @@ export class AuthMiddleware extends BaseMiddleware {
 
         if (!req.app.locals.user) {
           return res.status(404).json({
-            error: i18next.t('User is not found')
+            message: i18next.t('User is not found')
           });
         }
 
@@ -72,8 +72,8 @@ export class AuthMiddleware extends BaseMiddleware {
 
   notAuthorized(res: Response) {
     return res.status(401).json({
-      statusCode: 401,
-      error: i18next.t('Not Authorized')
+      status: 401,
+      message: i18next.t('Not Authorized')
     });
   }
 }
