@@ -157,7 +157,7 @@ describe('User Account App', () => {
   });
 
   it('should create a first wallet with balance 0.1 test ETH', async () => {
-    const newWallet = await userAccountForFirstWallet.createAndAddNewWallet(user, 'ETH', userPaymentPassword, inputWalletData);
+    const newWallet = await userAccountForFirstWallet.createAndAddNewWallet(user, 'ETH', userPaymentPassword);
 
     expect(newWallet.balance).is.equal('0.1');
   });
