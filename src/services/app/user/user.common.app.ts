@@ -46,7 +46,12 @@ export class UserCommonApplication {
       wallets: user.wallets.map(w => ({
         ticker: w.ticker,
         address: w.address,
-        tokens: w.tokens.map(t => ({ ...t, balance: undefined }))
+        tokens: w.tokens.map(t => ({ ...t, balance: undefined })),
+        balances: w.tokens.filter(t => Number(t.balance) > 0).filter((t, i) => i < 5).map(t => ({
+          token: t.symbol,
+          value: Number(t.balance)
+        })),
+        assetsCount: w.tokens.filter(t => Number(t.balance) > 0).length
       })),
       preferences,
       email: user.email,
@@ -76,7 +81,9 @@ export class UserCommonApplication {
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: walletAddress
+      });
     }
 
     const userToken = Token.createToken(token);

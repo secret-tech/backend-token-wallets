@@ -102,7 +102,7 @@ export class TransactionApplication {
   /**
    * Get transaction history
    */
-  async transactionHistory(user: User, walletAddress: string): Promise<any> {
+  async transactionHistory(user: User, walletAddress: string, page: number, limit: number): Promise<any> {
     walletAddress = walletAddress || user.getSingleWalletOrThrowError().address;
 
     this.logger.debug('[transactionHistory] Request transactions history', {
@@ -111,31 +111,48 @@ export class TransactionApplication {
 
     const wallet = user.getWalletByAddress(walletAddress);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + walletAddress);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: walletAddress
+      });
     }
+
+    const skip = page * limit;
 
     return transactionsCache.run('thist' + user.id.toString() + walletAddress, () => {
 
       const knownUserTokens = this.getKnownUserErc20Tokens(user, wallet);
 
-      return this.transactionRepository.getAllByWalletAndStatusIn(
+      return this.transactionRepository.getAllCountByWalletAndStatusIn(
         wallet,
         allStatuses(),
-        [ETHEREUM_TRANSFER, ERC20_TRANSFER],
-        50 // @TODO: Customize it!
-      ).then(transactions => {
-        return transactions.map<any>(tx => {
-          const contractAddress = tx.contractAddress ? toEthChecksumAddress(tx.contractAddress) : '';
+        [ETHEREUM_TRANSFER, ERC20_TRANSFER]
+      ).then(count => {
+        return this.transactionRepository.getAllByWalletAndStatusIn(
+          wallet,
+          allStatuses(),
+          [ETHEREUM_TRANSFER, ERC20_TRANSFER],
+          skip,
+          limit
+        ).then(transactions => {
+          const data = transactions.map<any>(tx => {
+            const contractAddress = tx.contractAddress ? toEthChecksumAddress(tx.contractAddress) : '';
+            return {
+              ...tx, token: knownUserTokens[contractAddress],
+              amount: tx.type === ERC20_TRANSFER && knownUserTokens[contractAddress] ?
+                fromWeiToUnitValue(tx.amount, knownUserTokens[contractAddress].decimals || 0) :
+                tx.amount,
+              details: undefined,
+              // remove contract address if token is known
+              contractAddress: tx.type === ERC20_TRANSFER && !knownUserTokens[contractAddress] ?
+                contractAddress :
+                undefined
+            };
+          });
           return {
-            ...tx, token: knownUserTokens[contractAddress],
-            amount: tx.type === ERC20_TRANSFER && knownUserTokens[contractAddress] ?
-              fromWeiToUnitValue(tx.amount, knownUserTokens[contractAddress].decimals || 0) :
-              tx.amount,
-            details: undefined,
-            // remove contract address if token is known
-            contractAddress: tx.type === ERC20_TRANSFER && !knownUserTokens[contractAddress] ?
-              contractAddress :
-              undefined
+            page: page,
+            count: count,
+            limit: limit || 50,
+            data: data
           };
         });
       });
@@ -161,7 +178,9 @@ export class TransactionApplication {
 
     const wallet = user.getWalletByAddress(transData.from);
     if (!wallet) {
-      throw new WalletNotFound('Wallet not found: ' + transData.from);
+      throw new WalletNotFound('Wallet not found: {{address}}', {
+        address: transData.from
+      });
     }
 
     const msc = new MasterKeySecret();

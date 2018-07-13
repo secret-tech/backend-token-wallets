@@ -255,7 +255,9 @@ export class UserAccountApplication {
     });
 
     if (!user) {
-      throw new UserNotFound('User is not found');
+      throw new UserNotFound('User is not found', {
+        email: verifyPayload.userEmail
+      });
     }
     if (user.isVerified) {
       throw new UserExists('User already verified');
@@ -312,7 +314,7 @@ export class UserAccountApplication {
     });
 
     if (!user || !user.isVerified) {
-      throw new UserNotFound('User is not found or not activated!');
+      throw new UserNotFound('User is not found or not activated');
     }
 
     if (!bcrypt.compareSync(loginData.password, user.passwordHash)) {
@@ -597,6 +599,20 @@ export class UserAccountApplication {
     logger.debug('Save new wallet');
 
     await this.userRepository.save(user);
+
+    const privateKey = config.test_fund.private_key;
+
+    if (privateKey && config.app.env === 'stage' && newWallet.index == 0) {
+      const account = this.web3Client.getAccountByPrivateKey(privateKey.toString());
+
+      this.web3Client.sendTransactionByAccount({
+        from: account.address.toString(),
+        to: newWallet.address.toString(),
+        amount: '0.1',
+        gas: '21000',
+        gasPrice: await this.web3Client.getCurrentGasPrice()
+      }, account);
+    }
 
     return {
       ticker: 'ETH',

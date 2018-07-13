@@ -32,13 +32,13 @@ export function contentMiddleware(req: RemoteInfoRequest & Request, res: Respons
     const acceptHeader = req.header('Accept') || '';
     if (acceptHeader !== 'application/json' && !acceptHeader.includes('application/vnd.wallets+json;')) {
       return res.status(NOT_ACCEPTABLE).json({
-        error: 'Unsupported "Accept" header'
+        message: 'Unsupported "Accept" header'
       });
     }
     const contentHeader = req.header('Content-Type') || '';
     if (contentHeader !== 'application/json' && !contentHeader.includes('application/x-www-form-urlencoded')) {
       return res.status(NOT_ACCEPTABLE).json({
-        error: 'Unsupported "Content-Type"'
+        message: 'Unsupported "Content-Type"'
       });
     }
   }

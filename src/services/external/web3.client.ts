@@ -17,6 +17,7 @@ export interface Web3ClientInterface {
 
   sufficientBalance(input: TransactionInput): Promise<boolean>;
   getAccountByMnemonicAndSalt(mnemonic: string, salt: string, walletIndex: number): any;
+  getAccountByPrivateKey(privateKey: string): any;
   getEthBalance(address: string): Promise<string>;
   getCurrentGasPrice(): Promise<string>;
   getContract(abi: any[], address?: string): Contract;
@@ -128,6 +129,13 @@ export class Web3Client implements Web3ClientInterface {
    */
   getAccountByMnemonicAndSalt(mnemonic: string, salt: string, walletIndex: number): any {
     const privateKey = getPrivateKeyByMnemonicAndSalt(mnemonic, salt, walletIndex);
+    return this.web3.eth.accounts.privateKeyToAccount(privateKey);
+  }
+
+  /**
+   * @param privateKey
+   */
+  getAccountByPrivateKey(privateKey: string): any {
     return this.web3.eth.accounts.privateKeyToAccount(privateKey);
   }
 

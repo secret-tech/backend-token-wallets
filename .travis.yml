@@ -1,5 +1,5 @@
 language: node_js
-node_js: '8.6'
+node_js: '10.3.0'
 sudo: required
 services:
 - docker
@@ -13,7 +13,6 @@ install:
 - docker-compose -f docker-compose.test.yml build --no-cache api
 script:
 - docker-compose -f docker-compose.test.yml run --rm api sh -c "npm run test:cover"
-after_success:
 - npm run build
 - chmod ugo+x ./build.sh
 - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "prod"; elif [ "$TRAVIS_BRANCH"

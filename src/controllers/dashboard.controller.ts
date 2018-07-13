@@ -34,7 +34,7 @@ export class DashboardController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         walletAddress: ethereumAddressValidator.optional()
-      }), req.query, res, next);
+      }), req, res, next);
     }
   )
   async dashboard(req: AuthenticatedRequest & Request, res: Response): Promise<void> {
@@ -51,7 +51,7 @@ export class DashboardController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         gas: Joi.string().required()
-      }), req.query, res, next);
+      }), req, res, next);
     }
   )
   async getCurrentInvestFee(req: Request, res: Response): Promise<void> {
@@ -65,12 +65,19 @@ export class DashboardController {
     '/transactions',
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
-        walletAddress: ethereumAddressValidator.optional()
-      }), req.query, res, next);
+        walletAddress: ethereumAddressValidator.optional(),
+        page: Joi.number().optional(),
+        limit: Joi.number().optional()
+      }), req, res, next);
     }
   )
   async transactionHistory(req: AuthenticatedRequest & Request, res: Response, next: NextFunction): Promise<void> {
-    res.json(await this.transactionApp.transactionHistory(req.app.locals.user, req.query.walletAddress));
+    res.json(await this.transactionApp.transactionHistory(
+      req.app.locals.user,
+      req.query.walletAddress,
+      req.query.page || 0,
+      req.query.limit || 50
+    ));
   }
 
   /**
@@ -81,7 +88,7 @@ export class DashboardController {
     (req, res, next) => {
       commonFlowRequestMiddleware(Joi.object().keys({
         contractAddress: ethereumAddressValidator.required()
-      }), req.query, res, next);
+      }), req, res, next);
     }
   )
   async getErc20TokenInfo(req: AuthenticatedRequest & Request, res: Response, next: NextFunction): Promise<void> {
@@ -113,7 +120,7 @@ export class DashboardController {
         gas: Joi.string().optional(),
         gasPrice: Joi.string().optional(),
         paymentPassword: Joi.string().required()
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async transactionInitiate(req: AuthenticatedRequest & Request, res: Response, next: NextFunction): Promise<void> {

@@ -71,7 +71,7 @@ describe('Dashboard App', () => {
 
     expect(balances.ethBalance).is.equal('1');
 
-    expect(balances.erc20TokensBalance.length).is.equal(1);
+    expect(balances.erc20TokensBalance.length).is.equal(8);
     expect(balances.erc20TokensBalance[0].balance).is.equal('0.000000000000000002');
   });
 });

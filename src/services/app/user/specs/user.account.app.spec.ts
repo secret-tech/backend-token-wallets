@@ -21,6 +21,8 @@ describe('User Account App', () => {
   let user: User;
   let authMock: TypeMoq.IMock<AuthClientInterface>;
   let userAccount: UserAccountApplication;
+  let userAccountMock: TypeMoq.IMock<UserAccountApplication>;
+  let userAccountForFirstWallet: UserAccountApplication;
   const userPaymentPassword = '1q@W3e$R5';
   const existingUserParams = {
     email: 'user1@USER.COM',
@@ -46,6 +48,15 @@ describe('User Account App', () => {
     }));
 
     userAccount = container.get<UserAccountApplication>(UserAccountApplicationType);
+
+    userAccountMock = TypeMoq.Mock.ofType<UserAccountApplication>(UserAccountApplication);
+    container.rebind<UserAccountApplication>(UserAccountApplicationType).toConstantValue(userAccountMock.object);
+    userAccountForFirstWallet = container.get<UserAccountApplication>(UserAccountApplicationType);
+
+    userAccountMock.setup((x) => x.createAndAddNewWallet(TypeMoq.It.isAny(), TypeMoq.It.isAnyString(), TypeMoq.It.isAnyString(), TypeMoq.It.isAny())).returns(async () => ({
+      ticker: 'ETH',
+      balance: '0.1'
+    }));
   });
 
   afterEach(() => {
@@ -143,5 +154,11 @@ describe('User Account App', () => {
     const refreshedUser = await getMongoRepository(User).findOne({ email: 'user1@user.com' });
 
     expect(refreshedUser.wallets[1].address).is.equal(newWallet.address);
+  });
+
+  it('should create a first wallet with balance 0.1 test ETH', async () => {
+    const newWallet = await userAccountForFirstWallet.createAndAddNewWallet(user, 'ETH', userPaymentPassword, inputWalletData);
+
+    expect(newWallet.balance).is.equal('0.1');
   });
 });

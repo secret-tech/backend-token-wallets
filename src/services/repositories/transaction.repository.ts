@@ -24,7 +24,8 @@ interface ExtendedTransaction extends Transaction {
  */
 export interface TransactionRepositoryInterface {
   save(tx: Transaction): Promise<Transaction>;
-  getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[], limit: number): Promise<ExtendedTransaction[]>;
+  getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[], skip: number, limit: number): Promise<ExtendedTransaction[]>;
+  getAllCountByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[]): Promise<number>;
   getByHash(transactionHash: string): Promise<Transaction>;
   getByVerificationId(verificationId: string): Promise<Transaction>;
 }
@@ -55,8 +56,10 @@ export class TransactionRepository implements TransactionRepositoryInterface {
    * @param wallet
    * @param statuses
    * @param types
+   * @param skip
+   * @param limit
    */
-  async getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[], limit: number): Promise<ExtendedTransaction[]> {
+  async getAllByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[], skip: number, limit: number): Promise<ExtendedTransaction[]> {
     const data = await getMongoManager().createEntityCursor(Transaction, {
       $and: [
         {
@@ -81,6 +84,7 @@ export class TransactionRepository implements TransactionRepositoryInterface {
         }
       ]
     })
+    .skip(skip)
     .limit(Math.max(limit, 1))
     .sort({
       timestamp: -1
@@ -95,6 +99,42 @@ export class TransactionRepository implements TransactionRepositoryInterface {
     }
 
     return data;
+  }
+
+  /**
+   *
+   * @param wallet
+   * @param statuses
+   * @param types
+   */
+  getAllCountByWalletAndStatusIn(wallet: Wallet, statuses: string[], types: string[]): Promise<number> {
+    const count = getMongoManager().createEntityCursor(Transaction, {
+      $and: [
+        {
+          $or: [
+            {
+              from: wallet.address
+            },
+            {
+              to: wallet.address
+            }
+          ]
+        },
+        {
+          status: {
+            $in: statuses
+          }
+        },
+        {
+          type: {
+            $in: types
+          }
+        }
+      ]
+    })
+    .count(false);
+
+    return count;
   }
 
   /**
