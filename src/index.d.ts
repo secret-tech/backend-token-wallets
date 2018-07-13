@@ -175,6 +175,7 @@ declare interface ActivationUserData {
 
 declare interface ActivationResult {
   accessToken: string;
+  wallets: Array<NewWallet>;
 }
 
 declare interface InitiateLoginInput {
