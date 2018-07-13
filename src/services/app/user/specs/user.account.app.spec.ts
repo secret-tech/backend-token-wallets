@@ -83,7 +83,6 @@ describe('User Account App', () => {
     const result = await userAccount.activate({ verification: user.verification as any });
 
     expect(result.accessToken).is.not.empty;
-    expect(result.wallets.length).is.equal(1);
   });
 
   it('should success login user', async () => {

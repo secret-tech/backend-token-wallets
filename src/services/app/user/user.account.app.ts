@@ -176,8 +176,6 @@ export class UserAccountApplication {
     });
     user.passwordHash = bcrypt.hashSync(userData.password);
 
-    await this.createNewWallet(logger, user, userData.paymentPassword);
-
     logger.debug('Save user');
 
     await this.userRepository.save(user);
@@ -224,21 +222,12 @@ export class UserAccountApplication {
       });
   }
 
-  private async activateUserAndGetNewWallets(logger: SubLogger, user: User): Promise<any[]> {
+  private async activateUser(logger: SubLogger, user: User): Promise<void> {
     logger.debug('Save verified user state');
 
     user.isVerified = true;
 
     await this.userRepository.save(user);
-
-    logger.debug('Prepare response wallets');
-
-    return [{
-      ticker: 'ETH',
-      address: user.wallets[0].address,
-      tokens: [],
-      balance: '0'
-    }];
   }
 
   /**
@@ -277,8 +266,7 @@ export class UserAccountApplication {
       deviceId: 'device'
     });
 
-    await this.addGlobalRegisteredTokens(logger, user, user.wallets[0]);
-    const newWallets = await this.activateUserAndGetNewWallets(logger, user);
+    await this.activateUser(logger, user);
 
     logger.debug('Save verified token');
 
@@ -294,7 +282,6 @@ export class UserAccountApplication {
 
     return {
       accessToken: token.token,
-      wallets: newWallets
     };
   }
 
