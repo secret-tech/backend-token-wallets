@@ -132,20 +132,12 @@ declare interface Wallet {
   address: string;
   balance: string;
   tokens: any[];
-  name: string,
-  color: number;
   salt?: string;
 }
 
 declare interface NewWallet extends Wallet {
   privateKey: string;
   mnemonic: string;
-}
-
-declare interface InputWallet {
-  address?: string;
-  name?: string;
-  color?: number;
 }
 
 declare interface CreatedUserData extends UserData {

@@ -29,14 +29,6 @@ describe('User Account App', () => {
     paymentPassword: 'password2',
     agreeTos: true
   };
-  const inputWalletData: InputWallet = {
-    name: 'some wallet name',
-    color: '#F3F4F5'
-  };
-  const inputWalletUpdateData: InputWallet = {
-    name: 'New wallet name',
-    color: '#C32333'
-  };
 
   beforeEach(async () => {
     user = await getMongoRepository(User).findOne({ email: 'user1@user.com' });
@@ -80,6 +72,7 @@ describe('User Account App', () => {
     const result = await userAccount.activate({ verification: user.verification as any });
 
     expect(result.accessToken).is.not.empty;
+    expect(result.wallets.length).is.equal(1);
   });
 
   it('should success login user', async () => {
@@ -143,33 +136,12 @@ describe('User Account App', () => {
   });
 
   it('should create a new wallet', async () => {
-    const newWallet = await userAccount.createAndAddNewWallet(user, 'ETH', userPaymentPassword, inputWalletData);
+    const newWallet = await userAccount.createAndAddNewWallet(user, 'ETH', userPaymentPassword);
 
     expect(newWallet.ticker).is.equal('ETH');
-    expect(newWallet.name).is.equal(inputWalletData.name);
-    expect(newWallet.color).is.equal(inputWalletData.color);
 
     const refreshedUser = await getMongoRepository(User).findOne({ email: 'user1@user.com' });
 
     expect(refreshedUser.wallets[1].address).is.equal(newWallet.address);
-    expect(refreshedUser.wallets[1].name).is.equal(newWallet.name);
-    expect(refreshedUser.wallets[1].color).is.equal(newWallet.color);
-  });
-
-  it('should update wallet', async () => {
-    const newWallet = await userAccount.createAndAddNewWallet(user, 'ETH', userPaymentPassword, inputWalletData);
-    inputWalletUpdateData.address = newWallet.address;
-
-    const updatedWallet = await userAccount.updateWallet(user, inputWalletUpdateData);
-
-    expect(updatedWallet.address).is.equal(inputWalletUpdateData.address);
-    expect(updatedWallet.name).is.equal(inputWalletUpdateData.name);
-    expect(updatedWallet.color).is.equal(inputWalletUpdateData.color);
-
-    const refreshedUser = await getMongoRepository(User).findOne({ email: 'user1@user.com' });
-
-    expect(refreshedUser.wallets[1].address).is.equal(updatedWallet.address);
-    expect(refreshedUser.wallets[1].name).is.equal(updatedWallet.name);
-    expect(refreshedUser.wallets[1].color).is.equal(updatedWallet.color);
   });
 });
