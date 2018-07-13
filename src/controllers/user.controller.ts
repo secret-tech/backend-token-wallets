@@ -369,7 +369,7 @@ export class UserController {
       commonFlowRequestMiddleware(Joi.object().keys({
         type: Joi.string().valid('ETH').required(),
         paymentPassword: Joi.string().required().regex(passwordRegex)
-      }), req.body, res, next);
+      }), req, res, next);
     }
   )
   async createNewWallet(req: Request & AuthenticatedRequest, res: Response): Promise<void> {

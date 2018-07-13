@@ -16,13 +16,13 @@ export const ethereumAddressValidator = Joi.string().regex(/^0x[\da-fA-F]{40,40}
  * Common template method for joi middleware
  *
  * @param scheme
- * @param req
+ * @param data
  * @param res
  * @param next
  */
 /* istanbul ignore next */
 export function commonFlowRequestMiddleware(scheme: Joi.Schema, req: Request, res: Response, next: NextFunction) {
-  const lang = 'en';
+  const lang = req.acceptsLanguages() || 'en';
   const langPath = `../resources/locales/${lang}/validation.json`;
 
   let data: any = {};

@@ -24,7 +24,7 @@ export class AuthMiddleware extends BaseMiddleware {
    * @param next
    */
   handler(req: AuthenticatedRequest & Request, res: Response, next: NextFunction) {
-    const lang = 'en';
+    const lang = req.acceptsLanguages() || 'en';
     const langPath = `../resources/locales/${lang}/errors.json`;
     const translations = fs.existsSync(langPath) ? require(langPath) : null;
 
